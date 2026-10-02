@@ -1,0 +1,6 @@
+{
+  "name": "SMOP DZ",
+  "description": "Algerian women's health and PCOS (Polycystic Ovary Syndrome) wellness management app.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
