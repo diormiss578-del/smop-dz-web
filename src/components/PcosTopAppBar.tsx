@@ -1,9 +1,9 @@
 import React from 'react';
-import { QrCode, Bell, Globe, User, UserPlus } from 'lucide-react';
+import { Bell, Globe, User, UserPlus } from 'lucide-react';
 import { usePcos } from '../context/PcosContext';
 
 export const PcosTopAppBar: React.FC = () => {
-  const { language, toggleLanguage, setQrDialogVisible, currentUser, navigateTo, currentScreen } = usePcos();
+  const { language, toggleLanguage, currentUser, navigateTo, currentScreen } = usePcos();
   const isAr = language === 'AR';
 
   return (
@@ -71,16 +71,6 @@ export const PcosTopAppBar: React.FC = () => {
           >
             <Globe className="w-3.5 h-3.5 text-[#D81B60]" />
             <span>{isAr ? 'English' : 'العربية'}</span>
-          </button>
-
-          {/* QR Code Action Button */}
-          <button
-            onClick={() => setQrDialogVisible(true)}
-            data-testid="top-qr-btn"
-            className="w-8 h-8 rounded-full bg-white border border-[#FFCEE3] hover:border-[#D81B60] text-[#D81B60] flex items-center justify-center transition-colors shadow-2xs"
-            title={isAr ? 'رمز QR للتطبيق' : "Code QR de l'Application"}
-          >
-            <QrCode className="w-4 h-4" />
           </button>
 
           {/* Notification icon */}

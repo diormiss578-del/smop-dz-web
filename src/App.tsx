@@ -2,7 +2,6 @@ import React from 'react';
 import { PcosProvider, usePcos } from './context/PcosContext';
 import { PcosTopAppBar } from './components/PcosTopAppBar';
 import { PcosBottomNav } from './components/PcosBottomNav';
-import { QrCodeModal } from './components/QrCodeModal';
 import { SpecialistChatModal } from './components/SpecialistChatModal';
 import { HomeScreen } from './components/screens/HomeScreen';
 import { SpecialistsScreen } from './components/screens/SpecialistsScreen';
@@ -49,7 +48,6 @@ const MainAppContent: React.FC = () => {
 
       <PcosBottomNav />
       <SpecialistChatModal />
-      <QrCodeModal />
     </div>
   );
 };

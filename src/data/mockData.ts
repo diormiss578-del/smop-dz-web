@@ -10,8 +10,6 @@ import {
   RecipeItem
 } from '../types';
 
-export const APP_SHARED_URL = "https://ai.studio/apps/46bef3e5-6732-48be-8abb-8db100012cf3";
-
 export const articles: Article[] = [
   {
     id: "art_insulin_resistant",

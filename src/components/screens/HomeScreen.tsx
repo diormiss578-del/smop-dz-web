@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Search, X, BookOpen, Clock, User, Sparkles, ChevronRight, ArrowLeft, UserPlus } from 'lucide-react';
 import { usePcos } from '../../context/PcosContext';
-import { QrCodeCard } from '../QrCodeCard';
 import { Article } from '../../types';
 
 export const HomeScreen: React.FC = () => {
@@ -78,9 +77,6 @@ export const HomeScreen: React.FC = () => {
           </button>
         </div>
       )}
-
-      {/* App QR Code Banner Card */}
-      <QrCodeCard />
 
       {/* Search Input Bar */}
       <div className="relative">

@@ -96,8 +96,6 @@ interface PcosContextType {
   getTrialDaysRemaining: (bundleId: string) => number;
   isBundleActive: (bundleId: string) => boolean;
   getExtraVideosCount: (bundleId: string) => number;
-  qrDialogVisible: boolean;
-  setQrDialogVisible: (visible: boolean) => void;
   articles: Article[];
   specialists: Specialist[];
   ecoStores: EcoStore[];
@@ -575,9 +573,6 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return val ? parseInt(val, 10) : 0;
   };
 
-  // 10. QR Code Dialog
-  const [qrDialogVisible, setQrDialogVisible] = useState<boolean>(false);
-
   // 11. Recipe Bundle State
   const [unlockedRecipeBundle, setUnlockedRecipeBundle] = useState<boolean>(() => {
     return localStorage.getItem('smop_unlocked_recipes') === 'true';
@@ -683,8 +678,6 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getTrialDaysRemaining,
         isBundleActive,
         getExtraVideosCount,
-        qrDialogVisible,
-        setQrDialogVisible,
         articles: staticArticles,
         specialists: staticSpecialists,
         ecoStores: staticEcoStores,
