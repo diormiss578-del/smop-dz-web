@@ -18,6 +18,7 @@ import {
   PaymentMethod,
   FitnessBundle
 } from '../types';
+import { SportsLevel, ProgramVariety } from '../data/sportsProgramsData';
 import {
   articles as staticArticles,
   specialists as staticSpecialists,
@@ -96,6 +97,8 @@ interface PcosContextType {
   getTrialDaysRemaining: (bundleId: string) => number;
   isBundleActive: (bundleId: string) => boolean;
   getExtraVideosCount: (bundleId: string) => number;
+  qrDialogVisible: boolean;
+  setQrDialogVisible: (visible: boolean) => void;
   articles: Article[];
   specialists: Specialist[];
   ecoStores: EcoStore[];
@@ -116,6 +119,24 @@ interface PcosContextType {
   recipeBundleCount: number;
   recipeBundlePriceDzd: number;
   totalRecipesCount: number;
+  sportsMembershipActive: boolean;
+  sportsMembershipDaysRemaining: number;
+  activateSportsMembership: () => void;
+  expireSportsMembership: () => void;
+  toggleSportsMembership: () => void;
+  currentSportsLevel: SportsLevel;
+  setCurrentSportsLevel: (level: SportsLevel) => void;
+  currentSportsVariety: ProgramVariety;
+  setCurrentSportsVariety: (variety: ProgramVariety) => void;
+  completedSportsVideos: Record<string, string[]>;
+  toggleSportsVideoCompletion: (programKey: string, videoId: string) => void;
+  completedSportsPrograms: string[];
+  purchasedSportsLevels: SportsLevel[];
+  purchaseSportsLevel: (level: SportsLevel) => void;
+  purchasedSportsPrograms: string[];
+  purchaseSportsProgram: (programId: string) => void;
+  simulateCompleteAllSportsVideos: (programKey: string) => void;
+  resetSportsLevelProgress: (programKey: string) => void;
 }
 
 const PcosContext = createContext<PcosContextType | undefined>(undefined);
@@ -573,6 +594,9 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return val ? parseInt(val, 10) : 0;
   };
 
+  // 10. QR Code Dialog
+  const [qrDialogVisible, setQrDialogVisible] = useState<boolean>(false);
+
   // 11. Recipe Bundle State
   const [unlockedRecipeBundle, setUnlockedRecipeBundle] = useState<boolean>(() => {
     return localStorage.getItem('smop_unlocked_recipes') === 'true';
@@ -611,7 +635,211 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // 13. Active Payment State for BaridiMob & CIB
+  // 13. Sports Programs State (Beginner, Intermediate, Advanced) & Varieties (Integrated vs Specialized)
+  const [currentSportsLevel, setCurrentSportsLevelState] = useState<SportsLevel>(() => {
+    return (localStorage.getItem('smop_active_sports_level') as SportsLevel) || 'beginner';
+  });
+
+  // Sports Membership State: 1,200 DA / month
+  const [sportsMembershipActive, setSportsMembershipActive] = useState<boolean>(() => {
+    const saved = localStorage.getItem('smop_sports_membership_active');
+    return saved !== null ? saved === 'true' : true; // Active by default for prototype testing
+  });
+
+  const [sportsMembershipDaysRemaining, setSportsMembershipDaysRemaining] = useState<number>(30);
+
+  const activateSportsMembership = () => {
+    setSportsMembershipActive(true);
+    setSportsMembershipDaysRemaining(30);
+    localStorage.setItem('smop_sports_membership_active', 'true');
+  };
+
+  const expireSportsMembership = () => {
+    setSportsMembershipActive(false);
+    setSportsMembershipDaysRemaining(0);
+    localStorage.setItem('smop_sports_membership_active', 'false');
+  };
+
+  const toggleSportsMembership = () => {
+    setSportsMembershipActive(prev => {
+      const next = !prev;
+      setSportsMembershipDaysRemaining(next ? 30 : 0);
+      localStorage.setItem('smop_sports_membership_active', String(next));
+      return next;
+    });
+  };
+
+  const setCurrentSportsLevel = (level: SportsLevel) => {
+    setCurrentSportsLevelState(level);
+    localStorage.setItem('smop_active_sports_level', level);
+  };
+
+  const [currentSportsVariety, setCurrentSportsVarietyState] = useState<ProgramVariety>(() => {
+    return (localStorage.getItem('smop_active_sports_variety') as ProgramVariety) || 'integrated';
+  });
+
+  const setCurrentSportsVariety = (variety: ProgramVariety) => {
+    setCurrentSportsVarietyState(variety);
+    localStorage.setItem('smop_active_sports_variety', variety);
+  };
+
+  const [completedSportsVideos, setCompletedSportsVideos] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('smop_completed_sports_videos');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    // Default 8 / 30 completed videos for beginner integrated & yoga for demonstration:
+    const defaultInit: Record<string, string[]> = {
+      beginner: [
+        'sports_beginner_integrated_v1',
+        'sports_beginner_integrated_v2',
+        'sports_beginner_integrated_v3',
+        'sports_beginner_integrated_v4',
+        'sports_beginner_integrated_v5',
+        'sports_beginner_integrated_v6',
+        'sports_beginner_integrated_v7',
+        'sports_beginner_integrated_v8'
+      ],
+      beginner_integrated: [
+        'sports_beginner_integrated_v1',
+        'sports_beginner_integrated_v2',
+        'sports_beginner_integrated_v3',
+        'sports_beginner_integrated_v4',
+        'sports_beginner_integrated_v5',
+        'sports_beginner_integrated_v6',
+        'sports_beginner_integrated_v7',
+        'sports_beginner_integrated_v8'
+      ],
+      beginner_yoga: [
+        'sports_beginner_yoga_v1',
+        'sports_beginner_yoga_v2',
+        'sports_beginner_yoga_v3',
+        'sports_beginner_yoga_v4'
+      ],
+      intermediate: [],
+      advanced: []
+    };
+    return defaultInit;
+  });
+
+  const [completedSportsPrograms, setCompletedSportsPrograms] = useState<string[]>(() => {
+    const saved = localStorage.getItem('smop_completed_sports_programs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [purchasedSportsLevels, setPurchasedSportsLevels] = useState<SportsLevel[]>(() => {
+    const saved = localStorage.getItem('smop_purchased_sports_levels');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    // Beginner is activated by default for prototype testing
+    return ['beginner'];
+  });
+
+  const [purchasedSportsPrograms, setPurchasedSportsPrograms] = useState<string[]>(() => {
+    const saved = localStorage.getItem('smop_purchased_sports_programs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    // Beginner integrated and beginner yoga are activated by default for prototype testing
+    return ['beginner_integrated', 'beginner_yoga', 'beginner'];
+  });
+
+  const purchaseSportsLevel = (level: SportsLevel) => {
+    setPurchasedSportsLevels(prev => {
+      if (prev.includes(level)) return prev;
+      const updated = [...prev, level];
+      localStorage.setItem('smop_purchased_sports_levels', JSON.stringify(updated));
+      return updated;
+    });
+    setPurchasedSportsPrograms(prev => {
+      const added = [`${level}_integrated`, `${level}_yoga`, level];
+      const updated = Array.from(new Set([...prev, ...added]));
+      localStorage.setItem('smop_purchased_sports_programs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const purchaseSportsProgram = (programId: string) => {
+    setPurchasedSportsPrograms(prev => {
+      if (prev.includes(programId)) return prev;
+      const updated = [...prev, programId];
+      localStorage.setItem('smop_purchased_sports_programs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const toggleSportsVideoCompletion = (programKey: string, videoId: string) => {
+    setCompletedSportsVideos(prev => {
+      const currentList = prev[programKey] || [];
+      const nextList = currentList.includes(videoId)
+        ? currentList.filter(id => id !== videoId)
+        : [...currentList, videoId];
+
+      const updated = { ...prev, [programKey]: nextList };
+      localStorage.setItem('smop_completed_sports_videos', JSON.stringify(updated));
+
+      // If reached 30 completed, mark program as completed
+      if (nextList.length >= 30) {
+        setCompletedSportsPrograms(cp => {
+          if (!cp.includes(programKey)) {
+            const nextCp = [...cp, programKey];
+            localStorage.setItem('smop_completed_sports_programs', JSON.stringify(nextCp));
+            return nextCp;
+          }
+          return cp;
+        });
+      }
+
+      return updated;
+    });
+  };
+
+  const simulateCompleteAllSportsVideos = (programKey: string) => {
+    const allIds: string[] = [];
+    for (let i = 1; i <= 30; i++) {
+      allIds.push(`sports_${programKey}_v${i}`);
+    }
+    setCompletedSportsVideos(prev => {
+      const updated = { ...prev, [programKey]: allIds };
+      localStorage.setItem('smop_completed_sports_videos', JSON.stringify(updated));
+      return updated;
+    });
+    setCompletedSportsPrograms(cp => {
+      if (!cp.includes(programKey)) {
+        const nextCp = [...cp, programKey];
+        localStorage.setItem('smop_completed_sports_programs', JSON.stringify(nextCp));
+        return nextCp;
+      }
+      return cp;
+    });
+  };
+
+  const resetSportsLevelProgress = (programKey: string) => {
+    setCompletedSportsVideos(prev => {
+      const updated = { ...prev, [programKey]: [] };
+      localStorage.setItem('smop_completed_sports_videos', JSON.stringify(updated));
+      return updated;
+    });
+    setCompletedSportsPrograms(cp => {
+      const updated = cp.filter(id => id !== programKey);
+      localStorage.setItem('smop_completed_sports_programs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // 14. Active Payment State for BaridiMob & CIB
   const [activePaymentItem, setActivePaymentItem] = useState<PaymentItem | null>(null);
 
   const startPayment = (item: PaymentItem) => {
@@ -678,6 +906,8 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getTrialDaysRemaining,
         isBundleActive,
         getExtraVideosCount,
+        qrDialogVisible,
+        setQrDialogVisible,
         articles: staticArticles,
         specialists: staticSpecialists,
         ecoStores: staticEcoStores,
@@ -697,7 +927,25 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
         completePayment,
         recipeBundleCount: RECIPE_BUNDLE_COUNT,
         recipeBundlePriceDzd: RECIPE_BUNDLE_PRICE_DZD,
-        totalRecipesCount: TOTAL_RECIPES_COUNT
+        totalRecipesCount: TOTAL_RECIPES_COUNT,
+        sportsMembershipActive,
+        sportsMembershipDaysRemaining,
+        activateSportsMembership,
+        expireSportsMembership,
+        toggleSportsMembership,
+        currentSportsLevel,
+        setCurrentSportsLevel,
+        currentSportsVariety,
+        setCurrentSportsVariety,
+        completedSportsVideos,
+        toggleSportsVideoCompletion,
+        completedSportsPrograms,
+        purchasedSportsLevels,
+        purchaseSportsLevel,
+        purchasedSportsPrograms,
+        purchaseSportsProgram,
+        simulateCompleteAllSportsVideos,
+        resetSportsLevelProgress
       }}
     >
       {children}

@@ -3,6 +3,7 @@ import { PcosProvider, usePcos } from './context/PcosContext';
 import { PcosTopAppBar } from './components/PcosTopAppBar';
 import { PcosBottomNav } from './components/PcosBottomNav';
 import { SpecialistChatModal } from './components/SpecialistChatModal';
+import { QrCodeModal } from './components/QrCodeModal';
 import { HomeScreen } from './components/screens/HomeScreen';
 import { SpecialistsScreen } from './components/screens/SpecialistsScreen';
 import { StoresScreen } from './components/screens/StoresScreen';
@@ -11,6 +12,8 @@ import { FitnessScreen } from './components/screens/FitnessScreen';
 import { KitchensScreen } from './components/screens/KitchensScreen';
 import { DashboardScreen } from './components/screens/DashboardScreen';
 import { SignUpScreen } from './components/screens/SignUpScreen';
+import { HealthyRecipeLibraryScreen } from './components/screens/HealthyRecipeLibraryScreen';
+import { SportsProgramsScreen } from './components/screens/SportsProgramsScreen';
 
 const MainAppContent: React.FC = () => {
   const { currentScreen } = usePcos();
@@ -25,6 +28,10 @@ const MainAppContent: React.FC = () => {
         return <StoresScreen />;
       case 'programs':
         return <ProgramsScreen />;
+      case 'healthy-recipes':
+        return <HealthyRecipeLibraryScreen />;
+      case 'sports-programs':
+        return <SportsProgramsScreen />;
       case 'fitness':
         return <FitnessScreen />;
       case 'kitchens':
@@ -48,6 +55,7 @@ const MainAppContent: React.FC = () => {
 
       <PcosBottomNav />
       <SpecialistChatModal />
+      <QrCodeModal />
     </div>
   );
 };

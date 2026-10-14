@@ -1,16 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
+  Store,
   MapPin,
   Phone,
-  Navigation,
+  ExternalLink,
+  Search,
+  Sparkles,
+  Check,
+  CheckCircle2,
+  Plus,
+  Edit3,
+  Trash2,
+  Eye,
+  EyeOff,
+  ShieldCheck,
   Tag,
-  Clock,
+  Navigation,
+  ChevronRight,
+  ChevronLeft,
   X,
-  Map as MapIcon,
-  ExternalLink
+  ArrowLeft,
+  ArrowRight,
+  SlidersHorizontal,
+  Gift,
+  BadgeCheck,
+  Send,
+  Building,
+  User,
+  MessageCircle,
+  Clock,
+  Compass
 } from 'lucide-react';
 import { usePcos } from '../../context/PcosContext';
-import { EcoStore } from '../../types';
+import {
+  HealthyStore,
+  HealthyStoreProduct,
+  HEALTHY_STORE_CATEGORIES,
+  INITIAL_HEALTHY_STORES,
+  SMOP_HEALTHY_PICKS,
+  PartnerApplicationData
+} from '../../data/healthyStoresData';
 
 const InstagramIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -20,245 +49,1512 @@ const InstagramIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
   </svg>
 );
 
+const FacebookIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+  </svg>
+);
+
 export const StoresScreen: React.FC = () => {
-  const { language, ecoStores, selectedStoreCategory, setStoreCategory } = usePcos();
-  const [selectedStoreForMap, setSelectedStoreForMap] = useState<EcoStore | null>(null);
+  const { language } = usePcos();
   const isAr = language === 'AR';
 
-  const categories = [
-    { en: 'Healthy Bakeries', ar: 'مخابز صحية' },
-    { en: 'Organic Dairy & Honey', ar: 'الألبان والعسل العضوي' },
-    { en: 'Natural Supplements', ar: 'المكملات الطبيعية' }
-  ];
+  // 1. Stores State (Loaded from LocalStorage or default initial data)
+  const [stores, setStores] = useState<HealthyStore[]>(() => {
+    const saved = localStorage.getItem('smop_healthy_stores_v2');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_HEALTHY_STORES;
+  });
 
-  const filteredStores = ecoStores.filter(store => store.categoryEn === selectedStoreCategory);
+  const saveStores = (updated: HealthyStore[]) => {
+    setStores(updated);
+    localStorage.setItem('smop_healthy_stores_v2', JSON.stringify(updated));
+  };
 
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-150" data-testid="stores-screen-layout">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-black text-[#1E293B] tracking-tight">
-          {isAr ? 'متاجر المنتجات الطبيعية والصحية في الجزائر' : 'Natural Eco-Stores Directory'}
-        </h2>
-        <p className="text-xs sm:text-sm text-[#64748B] mt-1">
-          {isAr
-            ? 'متاجر وموردون يوفرون حلولاً غذائية خالية من الجلوتين، أعشاب نقية ومكملات لدعم توازن المبايض.'
-            : 'Browse local suppliers offering PCOS-friendly organic and gluten-free ingredients.'}
-        </p>
-      </div>
+  // 2. Active View & Selected Store Details
+  const [selectedStore, setSelectedStore] = useState<HealthyStore | null>(null);
 
-      {/* Category Tabs */}
-      <div className="flex gap-2 border-b border-[#E2E8F0] pb-2 overflow-x-auto scrollbar-none">
-        {categories.map((cat) => {
-          const isActive = selectedStoreCategory === cat.en;
-          return (
-            <button
-              key={cat.en}
-              onClick={() => setStoreCategory(cat.en)}
-              className={`px-4 py-2 text-xs font-bold rounded-2xl whitespace-nowrap transition-all ${
-                isActive
-                  ? 'bg-[#D81B60] text-white shadow-xs'
-                  : 'bg-white text-[#64748B] hover:text-[#1E293B] border border-[#E2E8F0]'
-              }`}
-            >
-              {isAr ? cat.ar : cat.en}
-            </button>
-          );
-        })}
-      </div>
+  // 3. Search and Category Filter
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-      {/* Stores Grid */}
-      <div className="space-y-4">
-        {filteredStores.map((store) => {
-          const name = isAr ? store.nameAr : store.nameEn;
-          const loc = isAr ? store.locationAr : store.locationEn;
-          const adText = isAr ? store.adTextAr : store.adTextEn;
-          const promo = isAr ? store.promoAr : store.promoEn;
+  // 4. Modals
+  const [partnerModalOpen, setPartnerModalOpen] = useState<boolean>(false);
+  const [partnerSubmitted, setPartnerSubmitted] = useState<boolean>(false);
+  const [partnerForm, setPartnerForm] = useState<PartnerApplicationData>({
+    storeName: '',
+    ownerName: '',
+    phone: '',
+    city: 'البليدة (Blida)',
+    categories: ['Natural Products'],
+    socialLink: '',
+    description: ''
+  });
 
-          return (
-            <div
-              key={store.id}
-              className="bg-white border border-[#E2E8F0] hover:border-[#D81B60]/40 rounded-3xl overflow-hidden shadow-xs transition-all flex flex-col sm:flex-row group"
-            >
-              <div className="sm:w-52 h-44 sm:h-auto relative shrink-0 overflow-hidden">
-                <img
-                  src={store.imageUrl}
-                  alt={name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <span className="absolute top-2.5 start-2.5 bg-white/90 backdrop-blur-xs text-[#1E293B] text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-xs flex items-center gap-1">
-                  <Navigation className="w-3 h-3 text-[#D81B60]" />
-                  {store.distanceKm} km
-                </span>
-              </div>
+  // 5. Admin Dashboard State
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+  const [editingStore, setEditingStore] = useState<HealthyStore | null>(null);
+  const [isAddingStore, setIsAddingStore] = useState<boolean>(false);
+  const [adminNotification, setAdminNotification] = useState<string | null>(null);
 
-              <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-extrabold text-sm sm:text-base text-[#1E293B] group-hover:text-[#D81B60] transition-colors">
-                      {name}
-                    </h3>
-                    <span className="text-[10px] text-[#64748B] bg-[#FCF8F9] px-2 py-0.5 rounded-md border border-[#E2E8F0]">
-                      {store.durationMin} {isAr ? 'د' : 'min'}
-                    </span>
-                  </div>
+  // New Store Form State for Admin
+  const [storeFormData, setStoreFormData] = useState<Partial<HealthyStore>>({
+    nameEn: '',
+    nameAr: '',
+    logoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200',
+    coverUrl: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?auto=format&fit=crop&q=80&w=800',
+    categories: ['Healthy Bakeries'],
+    categoriesAr: ['مخابز صحية'],
+    city: 'Blida / البليدة',
+    addressEn: 'Downtown Blida',
+    addressAr: 'وسط مدينة البليدة',
+    shortDescEn: '',
+    shortDescAr: '',
+    fullDescEn: '',
+    fullDescAr: '',
+    phone: '+213 550 00 00 00',
+    instagramUrl: 'https://instagram.com/store.blida',
+    facebookUrl: 'https://facebook.com/store.blida',
+    mapQuery: 'Blida,+Algeria',
+    isPartner: true,
+    isFeatured: false,
+    currentOffersAr: '',
+    currentOffersEn: '',
+    products: [],
+    galleryUrls: []
+  });
 
-                  <div className="flex items-center gap-1 text-xs text-[#64748B] mt-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#D81B60] shrink-0" />
-                    <span>{loc}</span>
-                  </div>
+  // Filtered Stores Logic
+  const visibleStores = useMemo(() => {
+    return stores.filter((store) => !store.isHidden);
+  }, [stores]);
 
-                  {store.hasAd && adText && (
-                    <div className="bg-[#FCF8F9] border border-[#FFCEE3]/80 rounded-xl p-2.5 mt-3 text-xs">
-                      <p className="text-[#1E293B] font-medium leading-relaxed">
-                        {adText}
-                      </p>
-                      {promo && (
-                        <div className="flex items-center gap-1 text-[#D81B60] font-bold text-[11px] mt-1.5">
-                          <Tag className="w-3 h-3" />
-                          <span>{isAr ? 'كود الخصم:' : 'Promo code:'}</span>
-                          <span className="font-mono bg-white px-2 py-0.5 rounded border border-[#FFCEE3]">
-                            {promo}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+  const filteredStores = useMemo(() => {
+    return visibleStores.filter((store) => {
+      // 1. Category filter
+      const matchesCategory =
+        selectedCategory === 'All' ||
+        store.categories.includes(selectedCategory);
+
+      // 2. Search query filter (matches store name, category, or product name)
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return matchesCategory;
+
+      const matchesStoreName =
+        store.nameEn.toLowerCase().includes(q) ||
+        store.nameAr.toLowerCase().includes(q) ||
+        store.shortDescEn.toLowerCase().includes(q) ||
+        store.shortDescAr.toLowerCase().includes(q) ||
+        store.addressEn.toLowerCase().includes(q) ||
+        store.addressAr.toLowerCase().includes(q);
+
+      const matchesStoreCategory =
+        store.categories.some((cat) => cat.toLowerCase().includes(q)) ||
+        store.categoriesAr.some((cat) => cat.toLowerCase().includes(q));
+
+      const matchesProduct = store.products.some(
+        (p) =>
+          p.nameEn.toLowerCase().includes(q) ||
+          p.nameAr.toLowerCase().includes(q) ||
+          p.categoryEn.toLowerCase().includes(q) ||
+          p.categoryAr.toLowerCase().includes(q)
+      );
+
+      return matchesCategory && (matchesStoreName || matchesStoreCategory || matchesProduct);
+    });
+  }, [visibleStores, selectedCategory, searchQuery]);
+
+  // Featured Stores (for top spotlight)
+  const featuredStores = useMemo(() => {
+    return visibleStores.filter((store) => store.isFeatured);
+  }, [visibleStores]);
+
+  // Handle Partner Application Submit
+  const handlePartnerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!partnerForm.storeName || !partnerForm.phone) return;
+    setPartnerSubmitted(true);
+    setTimeout(() => {
+      // Create auto-mock entry in stores as pending or partner
+      const newMockStore: HealthyStore = {
+        id: 'store_' + Date.now(),
+        nameEn: partnerForm.storeName,
+        nameAr: partnerForm.storeName,
+        logoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200',
+        coverUrl: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?auto=format&fit=crop&q=80&w=800',
+        categories: partnerForm.categories.length ? partnerForm.categories : ['Natural Products'],
+        categoriesAr: partnerForm.categories.map(c => {
+          const found = HEALTHY_STORE_CATEGORIES.find(hc => hc.id === c);
+          return found ? found.nameAr : c;
+        }),
+        city: 'Blida / البليدة',
+        addressEn: 'Blida',
+        addressAr: 'البليدة',
+        shortDescEn: partnerForm.description || 'New partner healthy store in Blida.',
+        shortDescAr: partnerForm.description || 'متجر شريك جديد للمنتجات الصحية في البليدة.',
+        fullDescEn: partnerForm.description || 'Welcome to our healthy partner store in Blida.',
+        fullDescAr: partnerForm.description || 'أهلاً بكم في متجرنا الشريك للمنتجات الطبيعية في البليدة.',
+        phone: partnerForm.phone,
+        instagramUrl: partnerForm.socialLink || '',
+        mapQuery: 'Blida,+Algeria',
+        isPartner: true,
+        isFeatured: false,
+        galleryUrls: [],
+        products: []
+      };
+
+      saveStores([newMockStore, ...stores]);
+    }, 400);
+  };
+
+  // Admin Actions
+  const handleToggleFeatured = (storeId: string) => {
+    const updated = stores.map((s) =>
+      s.id === storeId ? { ...s, isFeatured: !s.isFeatured } : s
+    );
+    saveStores(updated);
+    notifyAdmin(isAr ? 'تم تحديث حالة المتجر المميز' : 'Updated featured status');
+  };
+
+  const handleTogglePartner = (storeId: string) => {
+    const updated = stores.map((s) =>
+      s.id === storeId ? { ...s, isPartner: !s.isPartner } : s
+    );
+    saveStores(updated);
+    notifyAdmin(isAr ? 'تم تحديث شارة شريك SMOP DZ' : 'Updated partner badge');
+  };
+
+  const handleToggleHide = (storeId: string) => {
+    const updated = stores.map((s) =>
+      s.id === storeId ? { ...s, isHidden: !s.isHidden } : s
+    );
+    saveStores(updated);
+    notifyAdmin(isAr ? 'تم تعديل ظهور المتجر' : 'Updated visibility');
+  };
+
+  const handleDeleteStore = (storeId: string) => {
+    if (confirm(isAr ? 'هل أنتِ متأكدة من حذف هذا المتجر؟' : 'Delete this store?')) {
+      const updated = stores.filter((s) => s.id !== storeId);
+      saveStores(updated);
+      if (selectedStore?.id === storeId) {
+        setSelectedStore(null);
+      }
+      notifyAdmin(isAr ? 'تم حذف المتجر بنجاح' : 'Store deleted');
+    }
+  };
+
+  const handleSaveStoreForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!storeFormData.nameAr && !storeFormData.nameEn) return;
+
+    if (editingStore) {
+      // Update
+      const updated = stores.map((s) =>
+        s.id === editingStore.id ? ({ ...s, ...storeFormData } as HealthyStore) : s
+      );
+      saveStores(updated);
+      setEditingStore(null);
+      notifyAdmin(isAr ? 'تم تعديل المتجر بنجاح' : 'Store updated successfully');
+    } else {
+      // Create new
+      const newStore: HealthyStore = {
+        id: 'store_' + Date.now(),
+        nameEn: storeFormData.nameEn || storeFormData.nameAr || 'New Store',
+        nameAr: storeFormData.nameAr || storeFormData.nameEn || 'متجر جديد',
+        logoUrl: storeFormData.logoUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200',
+        coverUrl: storeFormData.coverUrl || 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?auto=format&fit=crop&q=80&w=800',
+        categories: storeFormData.categories?.length ? storeFormData.categories : ['Natural Products'],
+        categoriesAr: storeFormData.categoriesAr?.length ? storeFormData.categoriesAr : ['منتجات طبيعية'],
+        city: 'Blida / البليدة',
+        addressEn: storeFormData.addressEn || 'Blida',
+        addressAr: storeFormData.addressAr || 'البليدة',
+        shortDescEn: storeFormData.shortDescEn || 'Healthy store in Blida.',
+        shortDescAr: storeFormData.shortDescAr || 'متجر صحي وطبيعي في ولاية البليدة.',
+        fullDescEn: storeFormData.fullDescEn || 'Specialized in organic and natural products in Blida.',
+        fullDescAr: storeFormData.fullDescAr || 'متخصص في المنتجات الصحية والطبيعية في ولاية البليدة.',
+        phone: storeFormData.phone || '+213 550 00 00 00',
+        instagramUrl: storeFormData.instagramUrl || '',
+        facebookUrl: storeFormData.facebookUrl || '',
+        mapQuery: storeFormData.mapQuery || 'Blida,+Algeria',
+        isPartner: storeFormData.isPartner ?? true,
+        isFeatured: storeFormData.isFeatured ?? false,
+        currentOffersAr: storeFormData.currentOffersAr || '',
+        currentOffersEn: storeFormData.currentOffersEn || '',
+        galleryUrls: [],
+        products: []
+      };
+      saveStores([newStore, ...stores]);
+      setIsAddingStore(false);
+      notifyAdmin(isAr ? 'تمت إضافة المتجر بنجاح' : 'Store added successfully');
+    }
+  };
+
+  const startEditStore = (store: HealthyStore) => {
+    setEditingStore(store);
+    setStoreFormData({ ...store });
+    setIsAddingStore(false);
+  };
+
+  const notifyAdmin = (msg: string) => {
+    setAdminNotification(msg);
+    setTimeout(() => setAdminNotification(null), 3000);
+  };
+
+  // =========================================================================
+  // VIEW: STORE DETAILS FULL PAGE
+  // =========================================================================
+  if (selectedStore) {
+    const store = selectedStore;
+    const storeName = isAr ? store.nameAr : store.nameEn;
+    const address = isAr ? store.addressAr : store.addressEn;
+    const fullDesc = isAr ? store.fullDescAr : store.fullDescEn;
+    const currentOffers = isAr ? store.currentOffersAr : store.currentOffersEn;
+
+    return (
+      <div className="space-y-6 pb-20 animate-in fade-in duration-200" data-testid="store-details-page">
+        {/* Back Button & Top Navigation */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => setSelectedStore(null)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white hover:bg-[#FFF0F6] border border-[#FFCEE3] text-[#D81B60] text-xs font-bold transition-colors shadow-2xs group"
+          >
+            {isAr ? (
+              <>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                <span>العودة لدليل المتاجر بالبليدة</span>
+              </>
+            ) : (
+              <>
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                <span>Back to Stores Directory</span>
+              </>
+            )}
+          </button>
+
+          {/* Partner Badge */}
+          {store.isPartner && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#DDFFBB] text-emerald-900 border border-emerald-300 text-xs font-black shadow-2xs">
+              <ShieldCheck className="w-4 h-4 text-emerald-700" />
+              <span>SMOP DZ Partner</span>
+            </div>
+          )}
+        </div>
+
+        {/* Hero Banner with Cover, Logo, and Details */}
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] overflow-hidden shadow-xs">
+          {/* Cover Image */}
+          <div className="relative h-56 sm:h-72 w-full bg-slate-900 overflow-hidden">
+            <img
+              src={store.coverUrl}
+              alt={storeName}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+            {/* City Badge overlay */}
+            <div className="absolute top-4 start-4 flex items-center gap-2">
+              <span className="bg-white/95 backdrop-blur-xs text-[#1E293B] text-xs font-black px-3 py-1 rounded-full shadow-md flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#D81B60]" />
+                <span>{store.city}</span>
+              </span>
+            </div>
+
+            {/* Bottom info on Cover */}
+            <div className="absolute bottom-4 start-4 end-4 flex items-end justify-between gap-4 text-white">
+              <div className="flex items-center gap-3.5">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white p-1 shadow-lg shrink-0 overflow-hidden border-2 border-white">
+                  <img
+                    src={store.logoUrl}
+                    alt={storeName}
+                    className="w-full h-full object-cover rounded-xl"
+                  />
                 </div>
 
-                <div className="flex items-center justify-between gap-2 pt-3 mt-3 border-t border-[#E2E8F0]/70 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`tel:${store.phone}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-[#E2E8F0] hover:border-[#D81B60] text-xs font-semibold text-[#1E293B] transition-colors"
-                    >
-                      <Phone className="w-3.5 h-3.5 text-[#D81B60]" />
-                      <span className="text-[11px] font-mono">{store.phone}</span>
-                    </a>
-                    <a
-                      href={store.instagramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 rounded-xl bg-white border border-[#E2E8F0] hover:text-[#D81B60] text-[#64748B] transition-colors"
-                      title="Instagram"
-                    >
-                      <InstagramIcon className="w-4 h-4" />
-                    </a>
-                  </div>
-
-                  <button
-                    onClick={() => setSelectedStoreForMap(store)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#FFCEE3]/80 hover:bg-[#FFCEE3] text-[#D81B60] rounded-xl text-xs font-bold transition-colors"
-                  >
-                    <Navigation className="w-3.5 h-3.5" />
-                    <span>{isAr ? 'خريطة الطريق' : 'Route HUD'}</span>
-                  </button>
+                <div>
+                  <h1 className="text-lg sm:text-2xl font-black text-white leading-tight">
+                    {storeName}
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-200 mt-1 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                    <span>{address}</span>
+                  </p>
                 </div>
               </div>
             </div>
-          );
-        })}
+          </div>
+
+          {/* Store Meta & Action Buttons */}
+          <div className="p-5 sm:p-6 space-y-5">
+            {/* Categories */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {(isAr ? store.categoriesAr : store.categories).map((cat, idx) => (
+                <span
+                  key={idx}
+                  className="bg-[#FFF0F6] text-[#D81B60] text-xs font-black px-3 py-1 rounded-full border border-[#FFCEE3]"
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+
+            {/* Store Description */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-black text-[#1E293B]">
+                {isAr ? 'عن المتجر ورسالته الصحية:' : 'About Store & Mission:'}
+              </h3>
+              <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
+                {fullDesc || store.shortDescAr}
+              </p>
+            </div>
+
+            {/* Current Offers (إن وجدت) */}
+            {currentOffers && (
+              <div className="p-4 rounded-2xl bg-[#DDFFBB]/40 border-2 border-[#DDFFBB] text-emerald-950 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-[#DDFFBB] text-emerald-800 shrink-0">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-black text-xs sm:text-sm">
+                    {isAr ? 'العروض الحالية لمتتبعات SMOP DZ:' : 'Current Offers:'}
+                  </h4>
+                  <p className="text-xs text-emerald-900 mt-0.5 leading-relaxed font-semibold">
+                    {currentOffers}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Contact & Directions Action Buttons (NO CART / NO PAYMENT) */}
+            <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+              <a
+                href={`tel:${store.phone}`}
+                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#D81B60] to-[#C2185B] text-white font-black text-xs shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-2"
+              >
+                <Phone className="w-4 h-4" />
+                <span>{isAr ? `اتصال بالمتجر (${store.phone})` : `Call Store (${store.phone})`}</span>
+              </a>
+
+              <a
+                href={`https://maps.google.com/?q=${encodeURIComponent(store.mapQuery)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-3 px-4 rounded-2xl bg-[#DDFFBB] hover:bg-[#c9f59f] text-emerald-900 border border-emerald-300 font-black text-xs transition-colors flex items-center justify-center gap-2"
+              >
+                <Navigation className="w-4 h-4 text-emerald-800" />
+                <span>{isAr ? 'الاتجاهات عبر الخريطة (Get Directions)' : 'Get Directions'}</span>
+              </a>
+
+              {store.instagramUrl && (
+                <a
+                  href={store.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-3 px-4 rounded-2xl bg-white hover:bg-slate-50 text-[#1E293B] border border-[#E2E8F0] font-black text-xs transition-colors flex items-center justify-center gap-2"
+                >
+                  <InstagramIcon className="w-4 h-4 text-pink-600" />
+                  <span>Instagram</span>
+                </a>
+              )}
+
+              {store.facebookUrl && (
+                <a
+                  href={store.facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-3 px-4 rounded-2xl bg-white hover:bg-slate-50 text-[#1E293B] border border-[#E2E8F0] font-black text-xs transition-colors flex items-center justify-center gap-2"
+                >
+                  <FacebookIcon className="w-4 h-4 text-blue-600" />
+                  <span>Facebook</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Featured Products Gallery (المنتجات المميزة بالمتجر) */}
+        {store.products && store.products.length > 0 && (
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E2E8F0] shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-base sm:text-lg text-[#1E293B] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#D81B60]" />
+                  <span>{isAr ? 'المنتجات المميزة في هذا المتجر' : 'Featured Store Products'}</span>
+                </h3>
+                <p className="text-xs text-[#64748B] mt-0.5">
+                  {isAr ? 'منتجات طبيعية وصحية متوفرة للطلب المباشر أو الشراء من المتجر:' : 'Healthy natural products available at this store:'}
+                </p>
+              </div>
+
+              <span className="text-xs font-bold text-[#64748B]">
+                {store.products.length} {isAr ? 'منتجات' : 'Products'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {store.products.map((prod) => (
+                <div
+                  key={prod.id}
+                  className="p-3.5 rounded-2xl bg-[#FCF8F9] border border-[#FFCEE3]/50 flex gap-3 hover:border-[#D81B60]/40 transition-colors"
+                >
+                  <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-white border border-[#E2E8F0]">
+                    <img
+                      src={prod.imageUrl}
+                      alt={isAr ? prod.nameAr : prod.nameEn}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] font-black text-[#D81B60] uppercase tracking-wider block">
+                        {isAr ? prod.categoryAr : prod.categoryEn}
+                      </span>
+                      <h4 className="font-black text-xs sm:text-sm text-[#1E293B] mt-0.5 line-clamp-1">
+                        {isAr ? prod.nameAr : prod.nameEn}
+                      </h4>
+                      <p className="text-[11px] text-[#64748B] line-clamp-2 mt-0.5 leading-snug">
+                        {isAr ? prod.descriptionAr : prod.descriptionEn}
+                      </p>
+                    </div>
+
+                    <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-emerald-800">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>{isAr ? 'متوفر لدى المتجر' : 'Available in store'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Store Photo Gallery */}
+        {store.galleryUrls && store.galleryUrls.length > 0 && (
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E2E8F0] shadow-xs space-y-3">
+            <h3 className="font-black text-base text-[#1E293B]">
+              {isAr ? 'صور من داخل المتجر والمنتجات:' : 'Store Gallery:'}
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {store.galleryUrls.map((url, idx) => (
+                <div key={idx} className="h-36 rounded-2xl overflow-hidden border border-[#E2E8F0]">
+                  <img src={url} alt={`Gallery ${idx}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Location & Map Preview */}
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E2E8F0] shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-base text-[#1E293B] flex items-center gap-2">
+              <Compass className="w-4 h-4 text-[#D81B60]" />
+              <span>{isAr ? 'الموقع والعنوان في البليدة:' : 'Location & Address:'}</span>
+            </h3>
+            <span className="text-xs font-bold text-[#64748B]">{store.city}</span>
+          </div>
+
+          <p className="text-xs sm:text-sm text-[#475569] font-medium flex items-center gap-1.5">
+            <MapPin className="w-4 h-4 text-[#D81B60] shrink-0" />
+            <span>{address}</span>
+          </p>
+
+          <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <span className="text-xs font-black text-[#1E293B] block">
+                {isAr ? 'هل تودين زيارة المتجر؟' : 'Ready to visit?'}
+              </span>
+              <span className="text-[11px] text-[#64748B] block">
+                {isAr ? 'اضغطي على الزر لفتح خرائط جوجل وبدء الملاحة المباشرة.' : 'Open Google Maps for turn-by-turn navigation.'}
+              </span>
+            </div>
+
+            <a
+              href={`https://maps.google.com/?q=${encodeURIComponent(store.mapQuery)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 rounded-xl bg-[#D81B60] hover:bg-[#C2185B] text-white font-black text-xs transition-colors flex items-center gap-2 shadow-xs shrink-0"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              <span>{isAr ? 'فتح الخريطة (Get Directions)' : 'Get Directions'}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VIEW: MAIN HEALTHY STORES DIRECTORY
+  // =========================================================================
+  return (
+    <div className="space-y-7 pb-20 animate-in fade-in duration-200" data-testid="healthy-stores-screen">
+      {/* 1. Header with Blida Tag & Admin Dashboard Link */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className="bg-[#DDFFBB] text-emerald-900 border border-emerald-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-emerald-700" />
+              <span>{isAr ? 'ولاية البليدة فقط • Blida' : 'Blida Wilaya Only'}</span>
+            </span>
+
+            <span className="bg-[#FFCEE3]/60 text-[#D81B60] text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <Building className="w-3 h-3" />
+              <span>{isAr ? 'دليل رقمي وشبكة شركاء' : 'Digital Partner Directory'}</span>
+            </span>
+          </div>
+
+          <h2 className="text-xl sm:text-3xl font-black text-[#1E293B] tracking-tight">
+            {isAr ? 'Healthy Stores • اكتشفي المتاجر الصحية في البليدة' : 'Healthy Stores — Blida Directory'}
+          </h2>
+
+          <p className="text-xs sm:text-sm text-[#64748B] mt-1 max-w-2xl leading-relaxed">
+            {isAr
+              ? 'اكتشفي مجموعة مختارة من المتاجر الصحية والطبيعية في البليدة، وتعرّفي على منتجاتها ومواقعها.'
+              : 'Discover a curated selection of healthy and natural stores in Blida, explore their products and locations.'}
+          </p>
+        </div>
+
+        {/* Admin Dashboard Quick Access Button */}
+        <div className="shrink-0 flex items-center gap-2">
+          <button
+            onClick={() => setIsAdminOpen(true)}
+            className="px-3.5 py-2 rounded-2xl bg-white hover:bg-[#FFF0F6] border border-[#FFCEE3] text-[#D81B60] text-xs font-black transition-colors flex items-center gap-1.5 shadow-2xs"
+            title="إدارة المتاجر (لوحة التحكم)"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>{isAr ? 'إدارة المتاجر (Admin)' : 'Admin Dashboard'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Stylized Dynamic Route HUD Map Modal */}
-      {selectedStoreForMap && (
+      {/* 2. Search Bar */}
+      <div className="relative">
+        <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-[#64748B]">
+          <Search className="w-4 h-4 text-[#D81B60]" />
+        </div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={
+            isAr
+              ? 'ابحثي باسم المتجر، نوع المنتج (عسل، خبز، كفير...) أو الحي بالبليدة...'
+              : 'Search by store name, product type, or category in Blida...'
+          }
+          className="w-full ps-10 pe-10 py-3 rounded-2xl bg-white border border-[#E2E8F0] focus:border-[#D81B60] focus:ring-2 focus:ring-[#FFCEE3]/50 text-xs sm:text-sm font-semibold text-[#1E293B] placeholder-[#94A3B8] shadow-2xs transition-all outline-none"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute inset-y-0 end-0 pe-3.5 flex items-center text-slate-400 hover:text-slate-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* 3. Category Filters (6 Specific Categories) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-[#64748B]">
+          <span className="font-bold text-[#1E293B]">
+            {isAr ? 'تصنيفات المتاجر:' : 'Store Categories:'}
+          </span>
+          <span>{filteredStores.length} {isAr ? 'متاجر متوفرة' : 'stores'}</span>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {HEALTHY_STORE_CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all whitespace-nowrap flex items-center gap-1.5 shadow-2xs ${
+                  isActive
+                    ? 'bg-[#D81B60] text-white shadow-xs'
+                    : 'bg-white text-[#64748B] hover:text-[#1E293B] border border-[#E2E8F0] hover:border-[#FFCEE3]'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{isAr ? cat.nameAr : cat.nameEn}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. FEATURED STORES (متاجر مميزة) */}
+      {selectedCategory === 'All' && !searchQuery && featuredStores.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-base sm:text-lg text-[#1E293B] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#D81B60]" />
+              <span>{isAr ? 'Featured Stores • متاجر مميزة' : 'Featured Stores'}</span>
+            </h3>
+            <span className="text-xs text-[#64748B] font-bold">
+              {isAr ? 'شركاء مختارون في البليدة' : 'Curated Blida Partners'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {featuredStores.map((store) => {
+              const name = isAr ? store.nameAr : store.nameEn;
+              const address = isAr ? store.addressAr : store.addressEn;
+              const shortDesc = isAr ? store.shortDescAr : store.shortDescEn;
+
+              return (
+                <div
+                  key={store.id}
+                  className="bg-white rounded-3xl border-2 border-[#FFCEE3] hover:border-[#D81B60] overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                  data-testid={`featured-store-${store.id}`}
+                >
+                  <div>
+                    {/* Cover image */}
+                    <div className="relative h-44 w-full overflow-hidden bg-slate-900">
+                      <img
+                        src={store.coverUrl}
+                        alt={name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                      {/* Top Badges */}
+                      <div className="absolute top-3 start-3 flex items-center gap-1.5 flex-wrap">
+                        <span className="bg-[#DDFFBB] text-emerald-950 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                          <ShieldCheck className="w-3 h-3 text-emerald-700" />
+                          <span>SMOP DZ Partner</span>
+                        </span>
+                      </div>
+
+                      <div className="absolute top-3 end-3">
+                        <span className="bg-white/95 text-[#1E293B] text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-[#D81B60]" />
+                          <span>{store.city}</span>
+                        </span>
+                      </div>
+
+                      {/* Logo & Name on Bottom of Image */}
+                      <div className="absolute bottom-3 start-3 end-3 flex items-center gap-2.5 text-white">
+                        <div className="w-10 h-10 rounded-xl bg-white p-0.5 shadow-md shrink-0 overflow-hidden border border-white">
+                          <img src={store.logoUrl} alt={name} className="w-full h-full object-cover rounded-lg" />
+                        </div>
+                        <h4 className="font-black text-sm text-white drop-shadow-sm truncate">
+                          {name}
+                        </h4>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(isAr ? store.categoriesAr : store.categories).map((cat, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-[#FFF0F6] text-[#D81B60] text-[10px] font-black px-2 py-0.5 rounded-md"
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+
+                      <p className="text-xs text-[#64748B] line-clamp-2 leading-relaxed">
+                        {shortDesc}
+                      </p>
+
+                      <p className="text-[11px] font-semibold text-[#475569] flex items-center gap-1 truncate pt-1">
+                        <MapPin className="w-3 h-3 text-[#D81B60] shrink-0" />
+                        <span>{address}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 pt-0">
+                    <button
+                      onClick={() => setSelectedStore(store)}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#D81B60] to-[#C2185B] text-white font-black text-xs shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <span>{isAr ? 'عرض المتجر (View Store)' : 'View Store'}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 5. SMOP HEALTHY PICKS (منتجات مختارة من المتاجر الشريكة) */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E2E8F0] shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-black text-base sm:text-lg text-[#1E293B] flex items-center gap-2">
+              <BadgeCheck className="w-5 h-5 text-emerald-600" />
+              <span>SMOP Healthy Picks</span>
+            </h3>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              {isAr
+                ? 'منتجات صحية ومغذية مختارة بعناية من المتاجر الشريكة في البليدة (بدون أسعار في هذه المرحلة).'
+                : 'Handpicked healthy products from partner stores in Blida:'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {SMOP_HEALTHY_PICKS.map((pick) => {
+            const pickName = isAr ? pick.nameAr : pick.nameEn;
+            const category = isAr ? pick.categoryAr : pick.categoryEn;
+            const storeName = isAr ? pick.storeNameAr : pick.storeNameEn;
+            const matchingStore = stores.find((s) => s.id === pick.storeId) || stores[0];
+
+            return (
+              <div
+                key={pick.id}
+                className="bg-[#FCF8F9] rounded-2xl border border-[#FFCEE3]/60 p-3 flex flex-col justify-between hover:border-[#D81B60]/50 transition-colors group"
+              >
+                <div>
+                  <div className="h-28 w-full rounded-xl overflow-hidden bg-white mb-2.5 border border-[#E2E8F0] relative">
+                    <img
+                      src={pick.imageUrl}
+                      alt={pickName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span className="absolute top-2 start-2 bg-white/90 text-[#D81B60] text-[9px] font-black px-2 py-0.5 rounded-md shadow-2xs">
+                      {category}
+                    </span>
+                  </div>
+
+                  <h4 className="font-black text-xs text-[#1E293B] line-clamp-1">
+                    {pickName}
+                  </h4>
+
+                  <span className="text-[11px] font-bold text-[#64748B] block mt-0.5 truncate">
+                    {isAr ? `متجر: ${storeName}` : `Store: ${storeName}`}
+                  </span>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-[#FFCEE3]/40">
+                  <button
+                    onClick={() => setSelectedStore(matchingStore)}
+                    className="w-full py-1.5 rounded-lg bg-white hover:bg-[#D81B60] text-[#D81B60] hover:text-white border border-[#FFCEE3] font-black text-[11px] transition-colors flex items-center justify-center gap-1"
+                  >
+                    <span>{isAr ? 'عرض المتجر' : 'View Store'}</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 6. ALL STORES GRID (قائمة المتاجر) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-base sm:text-lg text-[#1E293B]">
+            {isAr ? 'جميع المتاجر في البليدة' : 'All Healthy Stores in Blida'}
+          </h3>
+          <span className="text-xs text-[#64748B] font-semibold">
+            {filteredStores.length} {isAr ? 'متجر' : 'stores'}
+          </span>
+        </div>
+
+        {filteredStores.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-[#E2E8F0] p-6 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-[#FFF0F6] text-[#D81B60] flex items-center justify-center mx-auto">
+              <Store className="w-6 h-6" />
+            </div>
+            <h4 className="font-black text-sm text-[#1E293B]">
+              {isAr ? 'لم نجد أي متجر يطابق بحثكِ' : 'No stores found matching your criteria'}
+            </h4>
+            <p className="text-xs text-[#64748B]">
+              {isAr
+                ? 'جربي تغيير كلمات البحث أو اختيار تصنيف آخر مثل «الكل».'
+                : 'Try clearing your search or selecting a different category.'}
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('All');
+              }}
+              className="px-4 py-2 rounded-xl bg-[#D81B60] text-white text-xs font-black shadow-xs"
+            >
+              {isAr ? 'عرض جميع المتاجر' : 'Show all stores'}
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredStores.map((store) => {
+              const name = isAr ? store.nameAr : store.nameEn;
+              const address = isAr ? store.addressAr : store.addressEn;
+              const shortDesc = isAr ? store.shortDescAr : store.shortDescEn;
+
+              return (
+                <div
+                  key={store.id}
+                  className="bg-white rounded-3xl border border-[#E2E8F0] hover:border-[#FFCEE3] overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                  data-testid={`store-card-${store.id}`}
+                >
+                  <div>
+                    {/* Cover image */}
+                    <div className="relative h-44 w-full overflow-hidden bg-slate-900">
+                      <img
+                        src={store.coverUrl}
+                        alt={name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                      {/* Partner badge */}
+                      {store.isPartner && (
+                        <div className="absolute top-3 start-3">
+                          <span className="bg-[#DDFFBB] text-emerald-950 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                            <ShieldCheck className="w-3 h-3 text-emerald-700" />
+                            <span>SMOP DZ Partner</span>
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="absolute top-3 end-3">
+                        <span className="bg-white/95 text-[#1E293B] text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-[#D81B60]" />
+                          <span>{store.city}</span>
+                        </span>
+                      </div>
+
+                      {/* Logo and Name on image */}
+                      <div className="absolute bottom-3 start-3 end-3 flex items-center gap-2.5 text-white">
+                        <div className="w-10 h-10 rounded-xl bg-white p-0.5 shadow-md shrink-0 overflow-hidden border border-white">
+                          <img src={store.logoUrl} alt={name} className="w-full h-full object-cover rounded-lg" />
+                        </div>
+                        <h4 className="font-black text-sm text-white drop-shadow-sm truncate">
+                          {name}
+                        </h4>
+                      </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(isAr ? store.categoriesAr : store.categories).map((cat, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-[#FFF0F6] text-[#D81B60] text-[10px] font-black px-2 py-0.5 rounded-md"
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+
+                      <p className="text-xs text-[#64748B] line-clamp-2 leading-relaxed">
+                        {shortDesc}
+                      </p>
+
+                      <p className="text-[11px] font-semibold text-[#475569] flex items-center gap-1 truncate pt-1">
+                        <MapPin className="w-3 h-3 text-[#D81B60] shrink-0" />
+                        <span>{address}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 pt-0">
+                    <button
+                      onClick={() => setSelectedStore(store)}
+                      className="w-full py-2.5 rounded-xl bg-[#FFF0F6] hover:bg-[#D81B60] text-[#D81B60] hover:text-white border border-[#FFCEE3] font-black text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <span>{isAr ? 'عرض المتجر (View Store)' : 'View Store'}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 7. PARTNER APPLICATION CALLOUT (Votre magasin souhaite rejoindre SMOP DZ ?) */}
+      <div className="bg-gradient-to-br from-[#FFF5F9] via-white to-[#F0FFF4] rounded-3xl p-6 sm:p-8 border-2 border-[#FFCEE3] shadow-xs text-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-[#DDFFBB] text-emerald-800 flex items-center justify-center mx-auto shadow-2xs">
+          <Store className="w-6 h-6" />
+        </div>
+
+        <div className="max-w-xl mx-auto space-y-1.5">
+          <span className="text-[11px] font-black uppercase tracking-wider text-[#D81B60] block">
+            Réseau Partenaires Blida
+          </span>
+          <h3 className="text-lg sm:text-xl font-black text-[#1E293B]">
+            Votre magasin souhaite rejoindre SMOP DZ ?
+          </h3>
+          <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed font-medium">
+            {isAr
+              ? 'انضمي إلى شبكة شركاء SMOP DZ وعرّفي بمتجركِ ومنتجاتكِ الصحية أمام مجتمع يهتم بنمط الحياة الصحي في ولاية البليدة.'
+              : 'Join the SMOP DZ partner network and introduce your healthy products to a community dedicated to hormonal wellbeing in Blida.'}
+          </p>
+        </div>
+
+        <div>
+          <button
+            onClick={() => {
+              setPartnerSubmitted(false);
+              setPartnerModalOpen(true);
+            }}
+            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#D81B60] to-[#C2185B] text-white font-black text-xs shadow-md hover:opacity-95 transition-all inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{isAr ? 'طلب الانضمام كشريك (Become a Partner)' : 'Become a Partner'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL: PARTNER APPLICATION FORM                                           */}
+      {/* ========================================================================= */}
+      {partnerModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
-          onClick={() => setSelectedStoreForMap(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in"
+          onClick={() => setPartnerModalOpen(false)}
         >
           <div
-            className="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-[#E2E8F0]"
+            className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-[#E2E8F0] max-h-[90vh] overflow-y-auto space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
-              <div className="flex items-center gap-2">
-                <MapIcon className="w-5 h-5 text-[#D81B60]" />
-                <h3 className="font-bold text-sm sm:text-base text-[#1E293B]">
-                  {isAr ? 'مساعد الطريق والملاحة' : 'Route Navigator'}
+            <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
+              <div>
+                <h3 className="font-black text-base sm:text-lg text-[#1E293B]">
+                  {isAr ? 'طلب الانضمام لشبكة شركاء SMOP DZ' : 'Become a SMOP DZ Partner'}
                 </h3>
+                <p className="text-xs text-[#64748B]">
+                  {isAr ? 'خاص بالمتاجر الصحية في ولاية البليدة' : 'Exclusively for healthy stores in Blida'}
+                </p>
               </div>
               <button
-                onClick={() => setSelectedStoreForMap(null)}
-                className="w-7 h-7 rounded-full bg-[#FCF8F9] hover:bg-[#FFCEE3]/40 text-[#64748B] flex items-center justify-center"
+                onClick={() => setPartnerModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="py-3 text-center">
-              <h4 className="font-extrabold text-sm text-[#1E293B]">
-                {isAr ? selectedStoreForMap.nameAr : selectedStoreForMap.nameEn}
-              </h4>
-              <p className="text-xs text-[#64748B] flex items-center justify-center gap-1 mt-0.5">
-                <MapPin className="w-3.5 h-3.5 text-[#D81B60]" />
-                {isAr ? selectedStoreForMap.locationAr : selectedStoreForMap.locationEn}
-              </p>
-            </div>
-
-            {/* Stylized Route HUD Visualizer */}
-            <div className="my-3 bg-[#F1FDF5] border border-[#DDFFBB] rounded-2xl p-4 flex flex-col justify-between h-44 relative overflow-hidden">
-              <div className="flex items-center justify-between z-10">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-600 animate-ping"></span>
-                  <span className="text-xs font-bold text-[#1E293B]">
-                    {isAr ? 'موقعكِ الحالي (وسط البليدة)' : 'Your Location (Blida Center)'}
-                  </span>
+            {partnerSubmitted ? (
+              <div className="text-center py-6 space-y-3">
+                <div className="w-14 h-14 rounded-full bg-[#DDFFBB] text-emerald-800 flex items-center justify-center mx-auto text-2xl">
+                  ✓
                 </div>
-                <span className="text-[9px] font-black bg-[#FFCEE3] text-[#D81B60] px-2 py-0.5 rounded-full">
-                  GPS ACTIVE
-                </span>
+                <h4 className="font-black text-base text-[#1E293B]">
+                  {isAr ? 'تم استلام طلبكم بنجاح!' : 'Application Submitted!'}
+                </h4>
+                <p className="text-xs text-[#64748B] max-w-sm mx-auto leading-relaxed">
+                  {isAr
+                    ? 'شكراً لاهتمامكم بالانضمام إلى شبكة شركاء SMOP DZ. سيتواصل معكم فريقنا للتحقق من المتجر وإضافته رسمياً إلى الدليل.'
+                    : 'Thank you for your interest. Our team in Blida will contact you shortly to verify your store and activate your partner badge.'}
+                </p>
+                <button
+                  onClick={() => setPartnerModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl bg-[#D81B60] text-white font-black text-xs"
+                >
+                  {isAr ? 'حسناً، فهمت' : 'Done'}
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handlePartnerSubmit} className="space-y-3">
+                <div>
+                  <label className="text-xs font-black text-[#1E293B] block mb-1">
+                    {isAr ? 'اسم المتجر (Store Name) *' : 'Store Name *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={partnerForm.storeName}
+                    onChange={(e) => setPartnerForm({ ...partnerForm, storeName: e.target.value })}
+                    placeholder={isAr ? 'مثال: مخبزة بيو البليدة' : 'e.g., Bio Bakery Blida'}
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] focus:border-[#D81B60] focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-black text-[#1E293B] block mb-1">
+                      {isAr ? 'اسم المسؤول / المالك (Owner Name)' : 'Owner / Manager Name'}
+                    </label>
+                    <input
+                      type="text"
+                      value={partnerForm.ownerName}
+                      onChange={(e) => setPartnerForm({ ...partnerForm, ownerName: e.target.value })}
+                      placeholder={isAr ? 'الاسم واللقب' : 'Full Name'}
+                      className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] focus:border-[#D81B60] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-[#1E293B] block mb-1">
+                      {isAr ? 'رقم الهاتف (Phone Number) *' : 'Phone Number *'}
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={partnerForm.phone}
+                      onChange={(e) => setPartnerForm({ ...partnerForm, phone: e.target.value })}
+                      placeholder="0550 12 34 56"
+                      className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] focus:border-[#D81B60] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-[#1E293B] block mb-1">
+                    {isAr ? 'المدينة (City)' : 'City'}
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={partnerForm.city}
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] bg-slate-100 text-[#64748B]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-[#1E293B] block mb-1">
+                    {isAr ? 'تخصص المتجر (Store Category)' : 'Store Category'}
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    {HEALTHY_STORE_CATEGORIES.filter((c) => c.id !== 'All').map((c) => {
+                      const isChecked = partnerForm.categories.includes(c.id);
+                      return (
+                        <label
+                          key={c.id}
+                          className={`p-2 rounded-xl border flex items-center gap-1.5 cursor-pointer text-[11px] font-bold ${
+                            isChecked
+                              ? 'bg-[#FFF0F6] border-[#D81B60] text-[#D81B60]'
+                              : 'bg-white border-[#E2E8F0] text-[#475569]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            checked={isChecked}
+                            onChange={() => {
+                              const next = isChecked
+                                ? partnerForm.categories.filter((cat) => cat !== c.id)
+                                : [...partnerForm.categories, c.id];
+                              setPartnerForm({ ...partnerForm, categories: next });
+                            }}
+                          />
+                          <span>{c.icon}</span>
+                          <span>{isAr ? c.nameAr : c.nameEn}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-[#1E293B] block mb-1">
+                    {isAr ? 'رابط Instagram / Facebook' : 'Social Media Link'}
+                  </label>
+                  <input
+                    type="url"
+                    value={partnerForm.socialLink}
+                    onChange={(e) => setPartnerForm({ ...partnerForm, socialLink: e.target.value })}
+                    placeholder="https://instagram.com/yourstore"
+                    className="w-full text-xs font-bold px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] focus:border-[#D81B60] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-[#1E293B] block mb-1">
+                    {isAr ? 'وصف قصير للمنتجات والنشاط' : 'Short Description'}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={partnerForm.description}
+                    onChange={(e) => setPartnerForm({ ...partnerForm, description: e.target.value })}
+                    placeholder={isAr ? 'ما هي أبرز المنتجات الصحية التي تقدمونها؟' : 'Key natural & healthy products you offer...'}
+                    className="w-full text-xs font-bold px-3.5 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#D81B60] focus:outline-none"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#D81B60] to-[#C2185B] text-white font-black text-xs shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{isAr ? 'إرسال طلب الانضمام (Submit Application)' : 'Submit Application'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ADMIN DASHBOARD (إدارة المتاجر)                                     */}
+      {/* ========================================================================= */}
+      {isAdminOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in"
+          onClick={() => {
+            setIsAdminOpen(false);
+            setEditingStore(null);
+            setIsAddingStore(false);
+          }}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-[#E2E8F0] max-h-[92vh] overflow-y-auto space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Admin Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#FFF0F6] text-[#D81B60] flex items-center justify-center font-black">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base sm:text-lg text-[#1E293B]">
+                    {isAr ? 'لوحة تحكم إدارة المتاجر • Admin' : 'Healthy Stores Admin Dashboard'}
+                  </h3>
+                  <p className="text-xs text-[#64748B]">
+                    {isAr ? 'إضافة وتعديل وحذف المتاجر، تحديد المتاجر المميزة وشارة الشريك' : 'Manage stores, products, featured spots, and partner badges'}
+                  </p>
+                </div>
               </div>
 
-              {/* Graphic Connecting Path */}
-              <div className="flex items-center justify-between px-6 py-2 my-auto">
-                <div className="flex-1 relative flex items-center">
-                  <div className="h-1.5 w-full bg-emerald-200 rounded-full"></div>
-                  <div className="absolute inset-0 border-t-2 border-dashed border-emerald-600"></div>
-                </div>
-                <div className="px-3 text-center">
-                  <span className="text-xs font-black text-emerald-800 block">
-                    {selectedStoreForMap.distanceKm} km
-                  </span>
-                  <span className="text-[10px] text-emerald-600 flex items-center justify-center gap-0.5">
-                    <Clock className="w-2.5 h-2.5" />
-                    ~{selectedStoreForMap.durationMin} {isAr ? 'دقيقة' : 'mins'}
-                  </span>
-                </div>
-                <div className="flex-1 relative flex items-center">
-                  <div className="h-1.5 w-full bg-emerald-200 rounded-full"></div>
-                  <div className="absolute inset-0 border-t-2 border-dashed border-emerald-600"></div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between z-10 pt-2 border-t border-emerald-200/60">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-red-600" />
-                  <span className="text-xs font-bold text-[#1E293B]">
-                    {isAr ? selectedStoreForMap.nameAr : selectedStoreForMap.nameEn}
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-[#64748B]">
-                  {selectedStoreForMap.wilaya}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-4">
-              <a
-                href={selectedStoreForMap.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(selectedStoreForMap.nameEn)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-[#D81B60] hover:bg-[#C2185B] text-white rounded-xl font-bold text-xs shadow-xs transition-colors"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>{isAr ? 'فتح في خرائط Google' : 'Open in Google Maps'}</span>
-              </a>
               <button
-                onClick={() => setSelectedStoreForMap(null)}
-                className="px-4 py-2.5 bg-white border border-[#E2E8F0] hover:bg-[#FCF8F9] text-[#1E293B] rounded-xl font-semibold text-xs transition-colors"
+                onClick={() => {
+                  setIsAdminOpen(false);
+                  setEditingStore(null);
+                  setIsAddingStore(false);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200"
               >
-                {isAr ? 'إغلاق' : 'Close'}
+                <X className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* Notification */}
+            {adminNotification && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span>{adminNotification}</span>
+              </div>
+            )}
+
+            {/* Add or Edit Store Form */}
+            {(isAddingStore || editingStore) ? (
+              <form onSubmit={handleSaveStoreForm} className="space-y-4 bg-[#FCF8F9] p-4 sm:p-5 rounded-2xl border border-[#FFCEE3]/60">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-sm text-[#1E293B]">
+                    {editingStore ? (isAr ? 'تعديل بيانات المتجر' : 'Edit Store') : (isAr ? 'إضافة متجر جديد' : 'Add New Store')}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingStore(null);
+                      setIsAddingStore(false);
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-800 font-bold"
+                  >
+                    {isAr ? 'إلغاء' : 'Cancel'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">اسم المتجر بالعربية *</label>
+                    <input
+                      type="text"
+                      required
+                      value={storeFormData.nameAr || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, nameAr: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">Store Name (English) *</label>
+                    <input
+                      type="text"
+                      required
+                      value={storeFormData.nameEn || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, nameEn: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">رقم الهاتف (Phone Number)</label>
+                    <input
+                      type="text"
+                      value={storeFormData.phone || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, phone: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">رابط الشعار (Logo URL)</label>
+                    <input
+                      type="url"
+                      value={storeFormData.logoUrl || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, logoUrl: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-black text-[#1E293B] block mb-1">رابط صورة الغلاف (Cover Image URL)</label>
+                  <input
+                    type="url"
+                    value={storeFormData.coverUrl || ''}
+                    onChange={(e) => setStoreFormData({ ...storeFormData, coverUrl: e.target.value })}
+                    className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">العنوان بالتفصيل بالبليدة (العربية)</label>
+                    <input
+                      type="text"
+                      value={storeFormData.addressAr || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, addressAr: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">Address in Blida (English)</label>
+                    <input
+                      type="text"
+                      value={storeFormData.addressEn || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, addressEn: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">Instagram Link</label>
+                    <input
+                      type="text"
+                      value={storeFormData.instagramUrl || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, instagramUrl: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-black text-[#1E293B] block mb-1">Map Location Query</label>
+                    <input
+                      type="text"
+                      value={storeFormData.mapQuery || ''}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, mapQuery: e.target.value })}
+                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-black text-[#1E293B] block mb-1">العروض الحالية (Current Offers)</label>
+                  <input
+                    type="text"
+                    value={storeFormData.currentOffersAr || ''}
+                    onChange={(e) => setStoreFormData({ ...storeFormData, currentOffersAr: e.target.value })}
+                    placeholder="مثال: خصم 10% أو تذوق مجاني يوم السبت..."
+                    className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-[#E2E8F0] bg-white"
+                  />
+                </div>
+
+                {/* Toggles */}
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#1E293B]">
+                    <input
+                      type="checkbox"
+                      checked={storeFormData.isFeatured || false}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, isFeatured: e.target.checked })}
+                      className="rounded text-[#D81B60]"
+                    />
+                    <span>{isAr ? 'متجر مميز (Featured Store)' : 'Mark as Featured'}</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#1E293B]">
+                    <input
+                      type="checkbox"
+                      checked={storeFormData.isPartner ?? true}
+                      onChange={(e) => setStoreFormData({ ...storeFormData, isPartner: e.target.checked })}
+                      className="rounded text-emerald-600"
+                    />
+                    <span>{isAr ? 'شريك SMOP DZ Partner' : 'SMOP DZ Partner'}</span>
+                  </label>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-[#D81B60] text-white font-black text-xs shadow-xs"
+                  >
+                    {editingStore ? (isAr ? 'حفظ التعديلات' : 'Save Changes') : (isAr ? 'إضافة المتجر' : 'Add Store')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingStore(null);
+                      setIsAddingStore(false);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs"
+                  >
+                    {isAr ? 'إلغاء' : 'Cancel'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Add New Store Button */
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-[#1E293B]">
+                  {isAr ? `إجمالي المتاجر المسجلة بالبليدة (${stores.length})` : `Registered Stores in Blida (${stores.length})`}
+                </span>
+                <button
+                  onClick={() => {
+                    setIsAddingStore(true);
+                    setEditingStore(null);
+                    setStoreFormData({
+                      nameEn: '',
+                      nameAr: '',
+                      logoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200',
+                      coverUrl: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?auto=format&fit=crop&q=80&w=800',
+                      categories: ['Natural Products'],
+                      categoriesAr: ['منتجات طبيعية'],
+                      city: 'Blida / البليدة',
+                      addressEn: 'Blida',
+                      addressAr: 'البليدة',
+                      shortDescEn: '',
+                      shortDescAr: '',
+                      phone: '+213 550 00 00 00',
+                      mapQuery: 'Blida,+Algeria',
+                      isPartner: true,
+                      isFeatured: false,
+                      products: [],
+                      galleryUrls: []
+                    });
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-[#D81B60] hover:bg-[#C2185B] text-white font-black text-xs flex items-center gap-1.5 shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isAr ? 'إضافة متجر جديد' : 'Add Store'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Existing Stores Management List */}
+            <div className="space-y-3 pt-2">
+              {stores.map((store) => {
+                const name = isAr ? store.nameAr : store.nameEn;
+                return (
+                  <div
+                    key={store.id}
+                    className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      store.isHidden
+                        ? 'bg-slate-50 border-slate-200 opacity-60'
+                        : 'bg-white border-[#E2E8F0]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-[#E2E8F0]">
+                        <img src={store.logoUrl} alt={name} className="w-full h-full object-cover" />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-black text-xs sm:text-sm text-[#1E293B]">
+                            {name}
+                          </h4>
+                          {store.isPartner && (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-[#DDFFBB] text-emerald-900">
+                              Partner
+                            </span>
+                          )}
+                          {store.isFeatured && (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-[#FFCEE3] text-[#D81B60]">
+                              Featured
+                            </span>
+                          )}
+                          {store.isHidden && (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                              Hidden
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-[11px] text-[#64748B] mt-0.5">
+                          {store.city} • {store.phone}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quick Admin Toggles & Actions */}
+                    <div className="flex items-center gap-1.5 flex-wrap self-end sm:self-center">
+                      <button
+                        onClick={() => handleToggleFeatured(store.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors ${
+                          store.isFeatured
+                            ? 'bg-[#FFF0F6] text-[#D81B60] border-[#FFCEE3]'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                        title="تبديل المتجر كـ مميز"
+                      >
+                        {store.isFeatured ? '★ المميزة' : '☆ تمييز'}
+                      </button>
+
+                      <button
+                        onClick={() => handleTogglePartner(store.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors ${
+                          store.isPartner
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                        title="تبديل شارة الشريك"
+                      >
+                        {store.isPartner ? '✓ شريك' : '+ شريك'}
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleHide(store.id)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600"
+                        title={store.isHidden ? 'إظهار المتجر' : 'إخفاء المتجر'}
+                      >
+                        {store.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      </button>
+
+                      <button
+                        onClick={() => startEditStore(store)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
+                        title="تعديل المتجر"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteStore(store.id)}
+                        className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600"
+                        title="حذف المتجر"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

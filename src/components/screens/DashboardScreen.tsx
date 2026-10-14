@@ -23,7 +23,9 @@ import {
   ShieldCheck,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  CheckCircle2,
+  ChevronRight
 } from 'lucide-react';
 import { usePcos } from '../../context/PcosContext';
 
@@ -43,12 +45,14 @@ export const DashboardScreen: React.FC = () => {
     deleteReminder,
     reservations,
     cancelReservation,
-    fitnessBundles,
-    purchasedFitnessBundles,
-    isTrialActive,
-    getTrialDaysRemaining,
     unlockedRecipeBundle,
-    enrolledPrograms
+    enrolledPrograms,
+    sportsMembershipActive,
+    sportsMembershipDaysRemaining,
+    currentSportsLevel,
+    currentSportsVariety,
+    completedSportsVideos,
+    completedSportsPrograms
   } = usePcos();
   const isAr = language === 'AR';
 
@@ -641,74 +645,155 @@ export const DashboardScreen: React.FC = () => {
         )}
       </div>
 
-      {/* Active Fitness & Wellness Bundles */}
-      <div className="bg-white border border-[#E2E8F0] rounded-3xl p-5 sm:p-6 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
+      {/* My Sports Program & Completed Programs */}
+      <div className="bg-white border-2 border-[#FFCEE3] rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-[#FFCEE3]/50 flex items-center justify-center text-[#D81B60]">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-[#D81B60] text-white flex items-center justify-center shrink-0 shadow-xs">
               <Dumbbell className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-sm sm:text-base text-[#1E293B]">
-                {isAr ? 'حزم الرياضة والاشتراكات الهرمونية' : 'Active Fitness & Wellness Bundles'}
+              <h3 className="font-extrabold text-base text-[#1E293B]">
+                {isAr ? 'برنامجي الرياضي' : 'My Sports Program'}
               </h3>
               <p className="text-[11px] text-[#64748B]">
-                {isAr ? 'متابعة حالة الاشتراكات وفترات التجريب المجانية' : 'Track bundle subscriptions and free trials'}
+                {isAr ? 'متابعة الحصص الرياضية والتقدم اليومي' : 'Track daily workout sessions and fitness levels'}
               </p>
             </div>
           </div>
           <button
-            onClick={() => navigateTo('fitness')}
+            onClick={() => navigateTo('sports-programs')}
             className="text-xs font-bold text-[#D81B60] hover:underline"
           >
-            {isAr ? 'استعراض الحزم' : 'Browse Bundles'}
+            {isAr ? 'عرض البرامج الرياضية' : 'All Programs'}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {fitnessBundles.map(bundle => {
-            const isPurchased = purchasedFitnessBundles.includes(bundle.id);
-            const trialActive = isTrialActive(bundle.id);
-            const daysLeft = getTrialDaysRemaining(bundle.id);
-            const title = isAr ? bundle.titleAr : bundle.titleEn;
+        {/* Active Sports Program Card */}
+        {(() => {
+          const programKey = `${currentSportsLevel}_${currentSportsVariety}`;
+          const count = (completedSportsVideos[programKey] || completedSportsVideos[currentSportsLevel] || []).length;
+          const pct = Math.round((count / 30) * 100);
 
-            return (
-              <div
-                key={bundle.id}
-                className="bg-[#FCF8F9] border border-[#E2E8F0] rounded-2xl p-3.5 flex items-center justify-between gap-3"
-              >
-                <div className="min-w-0">
-                  <h4 className="font-bold text-xs text-[#1E293B] truncate">
-                    {title}
-                  </h4>
-                  <div className="mt-1">
-                    {isPurchased ? (
-                      <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        {isAr ? 'اشتراك نشط (30 يوماً)' : 'Active (30 Days)'}
-                      </span>
-                    ) : trialActive ? (
-                      <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                        <Gift className="w-3 h-3 text-amber-600" />
-                        {isAr ? `تجربة مجانية نشطة (${daysLeft} أيام متبقية)` : `Trial Active (${daysLeft} days left)`}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold text-[#64748B]">
-                        {isAr ? '900 دج • 3 أيام تجربة مجانية' : '900 DZD • 3-Day Trial'}
-                      </span>
-                    )}
+          const getProgramName = () => {
+            const levelLabel =
+              currentSportsLevel === 'beginner'
+                ? (isAr ? 'للمبتدئات' : 'Beginner')
+                : currentSportsLevel === 'intermediate'
+                ? (isAr ? 'للمتوسط' : 'Intermediate')
+                : (isAr ? 'للمتقدم' : 'Advanced');
+
+            if (currentSportsVariety === 'yoga') {
+              return isAr ? `برنامج اليوغا والمرونة (${levelLabel})` : `${levelLabel} Yoga Program`;
+            }
+            if (currentSportsVariety === 'dance') {
+              return isAr ? `برنامج الرقص والزومبا (${levelLabel})` : `${levelLabel} Dance & Zumba Program`;
+            }
+            if (currentSportsVariety === 'home') {
+              return isAr ? `برنامج التمارين المنزلية (${levelLabel})` : `${levelLabel} Home Workouts Program`;
+            }
+            if (currentSportsVariety === 'meditation') {
+              return isAr ? `برنامج التأمل والاسترخاء (${levelLabel})` : `${levelLabel} Meditation Program`;
+            }
+            return isAr ? `البرنامج المتكامل (${levelLabel})` : `${levelLabel} Integrated Program`;
+          };
+
+          return (
+            <div className="bg-[#FCF8F9] border border-[#FFCEE3] rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">
+                    {currentSportsVariety === 'yoga'
+                      ? '🧘'
+                      : currentSportsVariety === 'dance'
+                      ? '💃'
+                      : currentSportsVariety === 'home'
+                      ? '🏠'
+                      : currentSportsVariety === 'meditation'
+                      ? '🌿'
+                      : currentSportsLevel === 'beginner'
+                      ? '🌱'
+                      : currentSportsLevel === 'intermediate'
+                      ? '🔥'
+                      : '⚡'}
+                  </span>
+                  <div>
+                    <h4 className="font-black text-sm text-[#1E293B]">
+                      {getProgramName()}
+                    </h4>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      {isAr ? 'مشمول في اشتراك SMOP Sport (1,200 دج/شهر)' : 'SMOP Sport Membership • 1,200 DA/mo'}
+                    </span>
                   </div>
                 </div>
 
+                <span className="text-xs font-black text-[#D81B60] bg-white border border-[#FFCEE3] px-2.5 py-1 rounded-full shadow-2xs">
+                  {count} / 30 {isAr ? 'مكتمل' : 'completed'}
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-1">
+                <div className="w-full bg-[#E2E8F0] h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-[#D81B60] via-[#E040FB] to-emerald-500 h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, pct)}%`
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-[#64748B] font-semibold">
+                  <span>{pct}% {isAr ? 'مكتمل' : 'completed'}</span>
+                  <span>30 Videos</span>
+                </div>
+              </div>
+
+              <div className="pt-1 flex items-center justify-end">
                 <button
-                  onClick={() => navigateTo('fitness')}
-                  className="px-3 py-1.5 bg-white border border-[#E2E8F0] hover:border-[#D81B60] text-[#1E293B] rounded-xl text-xs font-bold shrink-0 transition-colors"
+                  onClick={() => navigateTo('sports-programs')}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gradient-to-r from-[#D81B60] to-[#C2185B] text-white font-bold text-xs shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
                 >
-                  {isPurchased || trialActive ? (isAr ? 'متابعة' : 'Open') : (isAr ? 'تجريب' : 'Try')}
+                  <span>{isAr ? 'متابعة التمرين' : 'Continue Workout'}</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-            );
-          })}
+            </div>
+          );
+        })()}
+
+        {/* Completed Programs */}
+        <div className="pt-2 border-t border-[#F1F5F9] space-y-2">
+          <h4 className="font-extrabold text-xs text-[#1E293B] flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{isAr ? 'البرامج المكتملة:' : 'Completed Programs:'}</span>
+          </h4>
+
+          {completedSportsPrograms.length > 0 ? (
+            <div className="space-y-1.5">
+              {completedSportsPrograms.map((progLevel) => (
+                <div
+                  key={progLevel}
+                  className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-950 font-bold"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{progLevel === 'beginner' ? '🌱' : progLevel === 'intermediate' ? '🔥' : '⚡'}</span>
+                    <span>
+                      {progLevel === 'beginner' ? 'Beginner Program' : progLevel === 'intermediate' ? 'Intermediate Program' : 'Advanced Program'}
+                    </span>
+                  </div>
+                  <span className="text-emerald-700 bg-white px-2 py-0.5 rounded-full text-[10px] font-black border border-emerald-300">
+                    ✓ Completed
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-3 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-[#64748B]">
+              {isAr
+                ? 'أكملي 30/30 حصة لتسجيل إنجاز البرنامج هنا!'
+                : 'Complete 30/30 sessions to see your completed program badge here!'}
+            </div>
+          )}
         </div>
       </div>
 

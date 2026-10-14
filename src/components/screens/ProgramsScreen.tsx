@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { usePcos } from '../../context/PcosContext';
 import { WellnessProgram, RecipeItem } from '../../types';
+import { HealthyRecipeLibraryScreen } from './HealthyRecipeLibraryScreen';
 
 export const ProgramsScreen: React.FC = () => {
   const {
@@ -32,9 +33,8 @@ export const ProgramsScreen: React.FC = () => {
     unlockedRecipeBundle,
     enrolledPrograms,
     startPayment,
-    recipeBundleCount,
-    recipeBundlePriceDzd,
-    totalRecipesCount
+    totalRecipesCount,
+    navigateTo
   } = usePcos();
 
   const isAr = language === 'AR';
@@ -48,38 +48,15 @@ export const ProgramsScreen: React.FC = () => {
   const [enrollingProgram, setEnrollingProgram] = useState<WellnessProgram | null>(null);
   const [includeFollowUp, setIncludeFollowUp] = useState<boolean>(true);
 
-  // Recipes state
-  const [recipeCategory, setRecipeCategory] = useState<string>('All');
-  const [recipeSearch, setRecipeSearch] = useState<string>('');
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeItem | null>(null);
-
   const filterOptions = [
     { id: 'All', labelEn: 'All Programs', labelAr: 'جميع البرامج' },
     { id: 'Standard Programs', labelEn: 'Standard Programs', labelAr: 'برامج عامة هادفة' },
     { id: 'Tailored Programs', labelEn: 'Tailored Protocols', labelAr: 'برامج مخصصة للأنواع' }
   ];
 
-  const recipeCategories = [
-    { id: 'All', en: 'All Recipes', ar: 'جميع الوصفات' },
-    { id: 'Low-GI Breakfast', en: 'Breakfast', ar: 'فطور الصباح' },
-    { id: 'Protein & Mains', en: 'Mains & Protein', ar: 'أطباق رئيسية' },
-    { id: 'Smoothies & Drinks', en: 'Smoothies & Teas', ar: 'سموذي ومشروبات' },
-    { id: 'Healthy Treats', en: 'Keto Treats', ar: 'حلويات كيتو' },
-    { id: 'Soups & Broths', en: 'Soups & Broths', ar: 'حساء علاجي' }
-  ];
-
   const filteredPrograms = wellnessPrograms.filter(prog => {
     if (selectedProgramType === 'All') return true;
     return prog.typeEn === selectedProgramType;
-  });
-
-  const filteredRecipes = recipes.filter(rec => {
-    const matchesCat = recipeCategory === 'All' || rec.categoryEn === recipeCategory;
-    const title = isAr ? rec.titleAr : rec.titleEn;
-    const benefit = isAr ? rec.hormonalBenefitAr : rec.hormonalBenefitEn;
-    const q = recipeSearch.toLowerCase().trim();
-    const matchesSearch = !q || title.toLowerCase().includes(q) || benefit.toLowerCase().includes(q);
-    return matchesCat && matchesSearch;
   });
 
   const toggleExpand = (id: string) => {
@@ -102,18 +79,6 @@ export const ProgramsScreen: React.FC = () => {
       type: includeFollowUp ? 'program_followup' : 'program_base'
     });
     setEnrollingProgram(null);
-  };
-
-  const handleBuyRecipeBundle = () => {
-    startPayment({
-      id: 'bundle_30_recipes',
-      titleEn: `Exclusive ${recipeBundleCount} PCOS Therapeutic Recipes Pack`,
-      titleAr: `حزمة الـ ${recipeBundleCount} وصفة صحية متوازنة لهرمونات تكيس المبايض`,
-      descriptionEn: `Curated pack of ${recipeBundleCount} metabolic meals, hormone-balancing breakfasts, snacks & cortisol elixirs from over ${totalRecipesCount} total recipes.`,
-      descriptionAr: `باقة الـ ${recipeBundleCount} وصفة الأكثر طلباً المجهزة بجرعات محسوبة من مضادات الالتهاب والألياف من بين أزيد من ${totalRecipesCount} وصفة.`,
-      priceDzd: recipeBundlePriceDzd,
-      type: 'recipe_pack'
-    });
   };
 
   return (
@@ -154,70 +119,9 @@ export const ProgramsScreen: React.FC = () => {
         >
           <ChefHat className="w-4 h-4" />
           <span>
-            {isAr ? `خانة الوصفات (+${totalRecipesCount} وصفة)` : `Recipes (+${totalRecipesCount})`}
+            {isAr ? 'مكتبة الوصفات الصحية' : 'Healthy Recipe Library'}
           </span>
         </button>
-      </div>
-
-      {/* Spotlight Promotion Banner for 30-Recipe Bundle (Accessible from either tab) */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 text-white rounded-3xl p-5 sm:p-6 shadow-md relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex-1 z-10">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-[#DDFFBB] text-emerald-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {isAr ? 'عرض حصري خاص' : 'Special Offer'}
-              </span>
-              <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {isAr ? `أزيد من ${totalRecipesCount} وصفة متوفرة` : `+${totalRecipesCount} Total Library`}
-              </span>
-            </div>
-
-            <h3 className="text-base sm:text-lg font-black mt-2 leading-snug">
-              {isAr
-                ? `حزمة الـ ${recipeBundleCount} وصفة صحية لتكيس المبايض بسعر ${recipeBundlePriceDzd} دج فقط!`
-                : `PCOS Pack: ${recipeBundleCount} Proven Therapeutic Recipes for only ${recipeBundlePriceDzd} DZD!`}
-            </h3>
-
-            <p className="text-xs text-white/90 mt-1 max-w-xl leading-relaxed">
-              {isAr
-                ? 'تشكيلة متكاملة تشمل فطور الصباح، أطباق رئيسية، مشروبات مضادة للأندروجين وحلويات صحية بدون سكر مصممة لخفض مقاومة الأنسولين والكورتيزول.'
-                : 'Complete dietary toolkit with low-GI breakfasts, anti-androgen elixirs, and keto treats designed for hormonal balance.'}
-            </p>
-
-            <div className="flex items-center gap-4 mt-3 text-[11px] text-emerald-100 flex-wrap">
-              <span className="flex items-center gap-1 font-semibold">
-                <Check className="w-3.5 h-3.5 text-[#DDFFBB]" />
-                {isAr ? 'دفع عبر بريدي موب (BaridiMob)' : 'BaridiMob Supported'}
-              </span>
-              <span className="flex items-center gap-1 font-semibold">
-                <Check className="w-3.5 h-3.5 text-[#DDFFBB]" />
-                {isAr ? 'بطاقات CIB والذهبية' : 'CIB & Edahabia'}
-              </span>
-            </div>
-          </div>
-
-          <div className="shrink-0 w-full sm:w-auto">
-            {unlockedRecipeBundle ? (
-              <div className="bg-white/20 backdrop-blur-xs border border-white/40 text-white px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-bold">
-                <CheckCircle2 className="w-4 h-4 text-[#DDFFBB]" />
-                <span>{isAr ? 'الحزمة مفعلة بحسابكِ ✅' : 'Pack Unlocked Active ✅'}</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleBuyRecipeBundle}
-                data-testid="buy-recipe-pack-btn"
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white hover:bg-emerald-50 text-emerald-900 font-black text-xs sm:text-sm shadow-md hover:scale-105 transition-all flex items-center justify-center gap-2"
-              >
-                <Sparkles className="w-4 h-4 text-[#D81B60]" />
-                <span>
-                  {isAr
-                    ? `شراء الحزمة (${recipeBundlePriceDzd} دج)`
-                    : `Buy 30-Pack (${recipeBundlePriceDzd} DZD)`}
-                </span>
-              </button>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* ========================================================== */}
@@ -225,6 +129,48 @@ export const ProgramsScreen: React.FC = () => {
       {/* ========================================================== */}
       {activeMainTab === 'programs' && (
         <div className="space-y-6 animate-in fade-in">
+          {/* Healthy Recipe Library Showcase Card */}
+          <div
+            onClick={() => setActiveMainTab('recipes')}
+            className="w-full bg-gradient-to-r from-[#FFF5F9] via-white to-[#FFF0F6] hover:from-[#FFEBF3] hover:to-[#FFE5F0] border-2 border-[#FFCEE3] rounded-3xl p-5 sm:p-6 cursor-pointer shadow-xs hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group relative overflow-hidden"
+            data-testid="healthy-recipe-library-card"
+          >
+            {/* Background shimmer accent */}
+            <div className="absolute top-0 end-0 w-32 h-32 bg-gradient-to-bl from-[#D81B60]/10 to-transparent rounded-full blur-xl pointer-events-none" />
+
+            <div className="flex items-start gap-4 z-10">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#D81B60] to-[#E040FB] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                <ChefHat className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-black text-base sm:text-lg text-[#1E293B] group-hover:text-[#D81B60] transition-colors leading-snug">
+                    Healthy Recipe Library
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FFCEE3]/80 text-[#D81B60]">
+                    {isAr ? 'مكتبة الوصفات' : 'Interactive Prototype'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#64748B] mt-1 leading-relaxed max-w-lg">
+                  Discover delicious and healthy recipes for your everyday lifestyle.
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full sm:w-auto shrink-0 z-10 pt-1 sm:pt-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveMainTab('recipes');
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#D81B60] to-[#C2185B] text-white font-black text-xs sm:text-sm shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-2 group-hover:scale-102"
+              >
+                <span>Explore Recipes</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
           {/* Filter Chips */}
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {filterOptions.map(opt => {
@@ -414,135 +360,14 @@ export const ProgramsScreen: React.FC = () => {
       )}
 
       {/* ========================================================== */}
-      {/* SECTION 2: DEDICATED RECIPES BOX (+100 RECIPES & 30-PACK) */}
+      {/* SECTION 2: HEALTHY RECIPE LIBRARY */}
       {/* ========================================================== */}
       {activeMainTab === 'recipes' && (
-        <div className="space-y-5 animate-in fade-in" data-testid="recipes-catalog-section">
-          {/* Header of Recipes */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base sm:text-lg font-black text-[#1E293B]">
-                {isAr
-                  ? `خانة ومكتبة الوصفات الصحية لتكيس المبايض (أزيد من ${totalRecipesCount} وصفة)`
-                  : `PCOS Therapeutic Recipe Library (+${totalRecipesCount} Recipes)`}
-              </h3>
-              <p className="text-xs text-[#64748B] mt-0.5">
-                {isAr
-                  ? 'وجبات منتقاة مخفضة للأنسولين، غنية بمضادات الأكسدة ومحسوبة السعرات لدعم التبويض اليومي.'
-                  : 'Calculated nutrient-dense meals supporting insulin sensitivity and ovulation.'}
-              </p>
-            </div>
-
-            {/* Unlock Status / Buy Button */}
-            {!unlockedRecipeBundle ? (
-              <button
-                onClick={handleBuyRecipeBundle}
-                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 shrink-0"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#DDFFBB]" />
-                <span>{isAr ? `شراء حزمة 30 وصفة (${recipeBundlePriceDzd} دج)` : `Buy 30-Pack (${recipeBundlePriceDzd} DZD)`}</span>
-              </button>
-            ) : (
-              <span className="text-xs font-black text-emerald-800 bg-[#DDFFBB] px-3 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                {isAr ? 'حزمة الـ 30 وصفة مفعلة بالكامل' : '30-Pack Fully Unlocked'}
-              </span>
-            )}
-          </div>
-
-          {/* Search & Categories */}
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute inset-y-0 start-3 my-auto text-[#64748B]" />
-              <input
-                type="text"
-                value={recipeSearch}
-                onChange={(e) => setRecipeSearch(e.target.value)}
-                placeholder={
-                  isAr
-                    ? 'ابحثي في أزيد من 100 وصفة: سلمون، بذور الشيا، إكسير النعناع، كيتو...'
-                    : 'Search in 100+ recipes: salmon, chia, spearmint tea, keto...'
-                }
-                className="w-full bg-white border border-[#E2E8F0] focus:border-[#D81B60] rounded-2xl ps-10 pe-4 py-2.5 text-xs text-[#1E293B] shadow-2xs outline-none"
-              />
-            </div>
-
-            {/* Category tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {recipeCategories.map((cat) => {
-                const isActive = recipeCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setRecipeCategory(cat.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-                      isActive
-                        ? 'bg-[#D81B60] text-white shadow-xs'
-                        : 'bg-white text-[#64748B] hover:text-[#1E293B] border border-[#E2E8F0]'
-                    }`}
-                  >
-                    {isAr ? cat.ar : cat.en}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Recipes Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRecipes.map((recipe) => {
-              const title = isAr ? recipe.titleAr : recipe.titleEn;
-              const cat = isAr ? recipe.categoryAr : recipe.categoryEn;
-              const benefit = isAr ? recipe.hormonalBenefitAr : recipe.hormonalBenefitEn;
-              const prep = isAr ? recipe.prepTimeAr : recipe.prepTimeEn;
-
-              return (
-                <div
-                  key={recipe.id}
-                  onClick={() => setSelectedRecipe(recipe)}
-                  className="bg-white border border-[#E2E8F0] hover:border-[#D81B60]/40 rounded-3xl overflow-hidden shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
-                >
-                  <div className="relative h-40 w-full overflow-hidden">
-                    <img
-                      src={recipe.imageUrl}
-                      alt={title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <span className="absolute top-2.5 start-2.5 bg-white/90 backdrop-blur-xs text-[#1E293B] text-[10px] font-bold px-2.5 py-0.5 rounded-lg shadow-xs">
-                      {cat}
-                    </span>
-                    <span className="absolute top-2.5 end-2.5 bg-[#FFCEE3]/90 text-[#D81B60] text-[10px] font-black px-2 py-0.5 rounded-lg shadow-xs flex items-center gap-1">
-                      <Flame className="w-3 h-3" />
-                      {recipe.calories} kcal
-                    </span>
-                  </div>
-
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h4 className="font-extrabold text-xs sm:text-sm text-[#1E293B] group-hover:text-[#D81B60] transition-colors line-clamp-1">
-                        {title}
-                      </h4>
-                      <p className="text-[11px] text-emerald-800 bg-[#DDFFBB]/50 rounded-lg p-2 mt-2 font-medium line-clamp-2 leading-relaxed">
-                        {benefit}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#E2E8F0] text-[11px]">
-                      <span className="text-[#64748B] flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#D81B60]" />
-                        {prep}
-                      </span>
-
-                      <span className="text-xs font-bold text-[#D81B60] flex items-center gap-0.5 group-hover:underline">
-                        <span>{isAr ? 'عرض التفاصيل' : 'View Recipe'}</span>
-                        <ChevronRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="animate-in fade-in" data-testid="healthy-recipe-library-tab">
+          <HealthyRecipeLibraryScreen
+            embedded={true}
+            onBack={() => setActiveMainTab('programs')}
+          />
         </div>
       )}
 
@@ -664,115 +489,6 @@ export const ProgramsScreen: React.FC = () => {
                 {isAr ? 'إلغاء' : 'Cancel'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================== */}
-      {/* RECIPE DETAIL MODAL */}
-      {/* ========================================================== */}
-      {selectedRecipe && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in"
-          onClick={() => setSelectedRecipe(null)}
-        >
-          <div
-            className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl border border-[#E2E8F0]"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="recipe-detail-modal"
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
-              <span className="text-[11px] font-bold text-[#D81B60] bg-[#FFCEE3]/40 px-3 py-1 rounded-full">
-                {isAr ? selectedRecipe.categoryAr : selectedRecipe.categoryEn}
-              </span>
-              <button
-                onClick={() => setSelectedRecipe(null)}
-                className="w-7 h-7 rounded-full bg-[#FCF8F9] hover:bg-[#FFCEE3]/40 text-[#64748B] flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <img
-              src={selectedRecipe.imageUrl}
-              alt={isAr ? selectedRecipe.titleAr : selectedRecipe.titleEn}
-              className="w-full h-48 object-cover rounded-2xl my-3 shadow-xs"
-            />
-
-            <h3 className="text-base sm:text-lg font-black text-[#1E293B] leading-tight">
-              {isAr ? selectedRecipe.titleAr : selectedRecipe.titleEn}
-            </h3>
-
-            {/* Macros Bar */}
-            <div className="grid grid-cols-4 gap-2 my-3 text-center text-xs">
-              <div className="bg-[#FCF8F9] border border-[#E2E8F0] p-2 rounded-xl">
-                <span className="text-[9px] text-[#64748B] block font-bold">{isAr ? 'سعرات' : 'Calories'}</span>
-                <span className="font-black text-[#D81B60]">{selectedRecipe.calories}</span>
-              </div>
-              <div className="bg-[#FCF8F9] border border-[#E2E8F0] p-2 rounded-xl">
-                <span className="text-[9px] text-[#64748B] block font-bold">{isAr ? 'بروتين' : 'Protein'}</span>
-                <span className="font-bold text-[#1E293B]">{selectedRecipe.proteinG}g</span>
-              </div>
-              <div className="bg-[#FCF8F9] border border-[#E2E8F0] p-2 rounded-xl">
-                <span className="text-[9px] text-[#64748B] block font-bold">{isAr ? 'نشويات' : 'Carbs'}</span>
-                <span className="font-bold text-[#1E293B]">{selectedRecipe.carbsG}g</span>
-              </div>
-              <div className="bg-[#FCF8F9] border border-[#E2E8F0] p-2 rounded-xl">
-                <span className="text-[9px] text-[#64748B] block font-bold">{isAr ? 'دهون صحية' : 'Fats'}</span>
-                <span className="font-bold text-[#1E293B]">{selectedRecipe.fatG}g</span>
-              </div>
-            </div>
-
-            {/* Hormonal Benefit Box */}
-            <div className="bg-[#DDFFBB]/40 border border-[#DDFFBB] rounded-2xl p-3 text-xs">
-              <span className="font-black text-emerald-900 block mb-1">
-                {isAr ? '🌿 الفائدة الهرمونية الخاصة بتكيس المبايض:' : '🌿 Targeted Hormonal Benefit:'}
-              </span>
-              <p className="text-emerald-950 font-medium leading-relaxed">
-                {isAr ? selectedRecipe.hormonalBenefitAr : selectedRecipe.hormonalBenefitEn}
-              </p>
-            </div>
-
-            {/* Ingredients */}
-            <div className="mt-4">
-              <h4 className="font-black text-xs sm:text-sm text-[#1E293B] mb-2 flex items-center gap-1.5">
-                <Utensils className="w-4 h-4 text-[#D81B60]" />
-                <span>{isAr ? 'المقادير والمكونات:' : 'Ingredients:'}</span>
-              </h4>
-              <ul className="space-y-1.5 text-xs text-[#334155]">
-                {(isAr ? selectedRecipe.ingredientsAr : selectedRecipe.ingredientsEn).map((ing, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D81B60] shrink-0 mt-1.5"></span>
-                    <span>{ing}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Preparation Steps */}
-            <div className="mt-4">
-              <h4 className="font-black text-xs sm:text-sm text-[#1E293B] mb-2 flex items-center gap-1.5">
-                <ChefHat className="w-4 h-4 text-[#D81B60]" />
-                <span>{isAr ? 'طريقة التحضير خطوة بخطوة:' : 'Preparation Steps:'}</span>
-              </h4>
-              <ol className="space-y-2 text-xs text-[#334155]">
-                {(isAr ? selectedRecipe.stepsAr : selectedRecipe.stepsEn).map((step, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-[#FCF8F9] border border-[#FFCEE3] text-[#D81B60] font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                      {i + 1}
-                    </span>
-                    <span className="leading-relaxed">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            <button
-              onClick={() => setSelectedRecipe(null)}
-              className="w-full mt-6 py-2.5 bg-[#D81B60] text-white rounded-xl text-xs font-bold hover:bg-[#C2185B]"
-            >
-              {isAr ? 'إغلاق الوصفة' : 'Close Recipe'}
-            </button>
           </div>
         </div>
       )}
