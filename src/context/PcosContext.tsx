@@ -35,11 +35,15 @@ import {
   TOTAL_RECIPES_COUNT
 } from '../data/mockData';
 
+export type NutritionTab = 'programs' | 'recipes' | 'providers' | 'stores';
+
 interface PcosContextType {
   language: 'AR' | 'EN';
   toggleLanguage: () => void;
   currentScreen: string;
   navigateTo: (screen: string) => void;
+  nutritionTab: NutritionTab;
+  setNutritionTab: (tab: NutritionTab) => void;
   selectedWilaya: string;
   setWilayaFilter: (wilaya: string) => void;
   selectedStoreCategory: string;
@@ -163,8 +167,23 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 2. Navigation
   const [currentScreen, setCurrentScreen] = useState<string>('home');
+  const [nutritionTab, setNutritionTab] = useState<NutritionTab>('programs');
   const navigateTo = (screen: string) => {
-    setCurrentScreen(screen);
+    if (screen === 'programs') {
+      setNutritionTab('programs');
+      setCurrentScreen('nutrition');
+    } else if (screen === 'healthy-recipes') {
+      setNutritionTab('recipes');
+      setCurrentScreen('nutrition');
+    } else if (screen === 'kitchens') {
+      setNutritionTab('providers');
+      setCurrentScreen('nutrition');
+    } else if (screen === 'stores') {
+      setNutritionTab('stores');
+      setCurrentScreen('nutrition');
+    } else {
+      setCurrentScreen(screen);
+    }
     setSelectedWilaya('Blida (البليدة)');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -873,6 +892,8 @@ export const PcosProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleLanguage,
         currentScreen,
         navigateTo,
+        nutritionTab,
+        setNutritionTab,
         selectedWilaya,
         setWilayaFilter: setSelectedWilaya,
         selectedStoreCategory,

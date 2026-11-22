@@ -302,7 +302,7 @@ export const HealthyRecipeLibraryScreen: React.FC<HealthyRecipeLibraryScreenProp
   }, [selectedCustomRecipeIds]);
 
   return (
-    <div className="space-y-6 pb-28 animate-in fade-in duration-300 relative">
+    <div className={`space-y-6 ${embedded ? 'pb-8' : 'pb-28'} animate-in fade-in duration-300 relative`}>
       {/* Toast Notification */}
       {feedbackToast && (
         <div className="fixed top-20 start-1/2 -translate-x-1/2 z-50 bg-[#1E293B]/95 text-white backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl border border-white/10 text-xs font-bold animate-in fade-in slide-in-from-top-4 flex items-center gap-2 max-w-sm text-center">
@@ -311,43 +311,39 @@ export const HealthyRecipeLibraryScreen: React.FC<HealthyRecipeLibraryScreenProp
         </div>
       )}
 
-      {/* Top Navigation & Breadcrumb */}
-      <div className="flex items-center justify-between gap-3 pt-1">
-        <button
-          onClick={onBack ? onBack : () => navigateTo('programs')}
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white hover:bg-[#FFF0F6] border border-[#FFCEE3] text-[#D81B60] text-xs font-bold transition-colors shadow-2xs group"
-          title={isAr ? 'العودة إلى البرامج' : 'Back to Programs'}
-        >
-          {isAr ? (
-            <>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              <span>العودة إلى البرامج</span>
-            </>
-          ) : (
-            <>
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-              <span>Back to Programs</span>
-            </>
-          )}
-        </button>
-
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#FFF0F6] text-[#D81B60] border border-[#FFCEE3]">
-            {isAr ? 'نسخة تفاعلية Prototype' : 'Interactive Prototype'}
-          </span>
+      {/* Top Navigation & Breadcrumb (Standalone only) */}
+      {!embedded && (
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <button
+            onClick={onBack ? onBack : () => navigateTo('programs')}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white hover:bg-[#FFF0F6] border border-[#FFCEE3] text-[#D81B60] text-xs font-bold transition-colors shadow-2xs group"
+            title={isAr ? 'العودة إلى البرامج' : 'Back to Programs'}
+          >
+            {isAr ? (
+              <>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                <span>العودة إلى البرامج</span>
+              </>
+            ) : (
+              <>
+                <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>Back to Programs</span>
+              </>
+            )}
+          </button>
         </div>
-      </div>
+      )}
 
       {/* Page Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-white via-[#FCF8F9] to-[#FFF0F6] rounded-3xl p-5 sm:p-7 border border-[#FFCEE3] shadow-xs">
+      <div className="relative overflow-hidden bg-gradient-to-br from-white via-[#FCF8F9] to-[#FFF0F6] rounded-3xl p-5 sm:p-6 border border-[#FFCEE3] shadow-xs">
         <div className="max-w-2xl relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFCEE3]/60 text-[#D81B60] text-xs font-black uppercase tracking-wider mb-2">
             <ChefHat className="w-3.5 h-3.5" />
-            <span>SMOP DZ Kitchen Vault</span>
+            <span>{isAr ? 'مكتبة الوصفات الصحية' : 'SMOP DZ Kitchen Vault'}</span>
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black text-[#1E293B] tracking-tight">
-            Healthy Recipe Library
+          <h2 className="text-lg sm:text-2xl font-black text-[#1E293B] tracking-tight">
+            {isAr ? 'الوصفات الصحية المتوازنة للهرمونات' : 'Healthy Recipe Library'}
           </h2>
 
           <p className="text-xs sm:text-sm text-[#64748B] mt-1.5 leading-relaxed font-medium">

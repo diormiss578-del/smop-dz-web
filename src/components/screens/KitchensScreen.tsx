@@ -23,7 +23,11 @@ import confetti from 'canvas-confetti';
 import { usePcos } from '../../context/PcosContext';
 import { HomeCook, FoodMenuItem } from '../../types';
 
-export const KitchensScreen: React.FC = () => {
+interface KitchensScreenProps {
+  embedded?: boolean;
+}
+
+export const KitchensScreen: React.FC<KitchensScreenProps> = ({ embedded = false }) => {
   const { language, homeCooks, addReservation, navigateTo, currentUser } = usePcos();
   const isAr = language === 'AR';
 
@@ -161,13 +165,13 @@ export const KitchensScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-150" data-testid="kitchens-screen-layout">
+    <div className={`space-y-6 ${embedded ? 'pb-4' : 'pb-20'} animate-in fade-in duration-150`} data-testid="kitchens-screen-layout">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
           <span className="bg-[#FFCEE3]/50 text-[#D81B60] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
             <ChefHat className="w-3 h-3" />
-            {isAr ? 'المطابخ الصحية بالبليدة' : 'Healthy Home Kitchens'}
+            {isAr ? 'مقدمو الأكل الصحي بالبليدة' : 'Healthy Food Providers'}
           </span>
           <span className="bg-emerald-100 text-emerald-900 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
             <Zap className="w-3 h-3 text-emerald-600" />
@@ -175,13 +179,13 @@ export const KitchensScreen: React.FC = () => {
           </span>
         </div>
 
-        <h2 className="text-xl sm:text-2xl font-black text-[#1E293B] tracking-tight">
-          {isAr ? 'قائمتان لكل مطبخ: المتوفر حالياً والطلب المسبق' : 'Two Menus: Available Now & 7-12h Pre-Order'}
+        <h2 className="text-lg sm:text-2xl font-black text-[#1E293B] tracking-tight">
+          {isAr ? 'مقدمو الأكل الصحي والمطابخ المعتمدة' : 'Healthy Food Providers & Home Kitchens'}
         </h2>
         <p className="text-xs sm:text-sm text-[#64748B] mt-1">
           {isAr
-            ? 'لكل مطبخ قائمتان مستقلتان: القائمة الأولى أطباق ومخبوزات متوفرة حالياً للتوصيل الفوري، والقائمة الثانية وجبات تقليدية على الفخار تتطلب طلباً مسبقاً من 7 إلى 12 ساعة.'
-            : 'Each kitchen provides two menus: Items available now for immediate delivery, and heritage slow-cooked meals requiring 7 to 12 hours pre-order.'}
+            ? 'وجبات صحية جاهزة ومتوازنة لهرموناتكِ: قائمة المتوفر حالياً للتوصيل الفوري، وقائمة الطلب المسبق (7-12 ساعة) للأطباق التقليدية.'
+            : 'Balanced PCOS-friendly meals from trusted kitchens: Available Now for instant delivery and 7-12h Pre-Order for slow-cooked dishes.'}
         </p>
       </div>
 

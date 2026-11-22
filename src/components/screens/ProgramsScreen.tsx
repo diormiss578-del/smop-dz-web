@@ -24,7 +24,15 @@ import { usePcos } from '../../context/PcosContext';
 import { WellnessProgram, RecipeItem } from '../../types';
 import { HealthyRecipeLibraryScreen } from './HealthyRecipeLibraryScreen';
 
-export const ProgramsScreen: React.FC = () => {
+interface ProgramsScreenProps {
+  embedded?: boolean;
+  onOpenRecipes?: () => void;
+}
+
+export const ProgramsScreen: React.FC<ProgramsScreenProps> = ({
+  embedded = false,
+  onOpenRecipes
+}) => {
   const {
     language,
     wellnessPrograms,
@@ -41,6 +49,14 @@ export const ProgramsScreen: React.FC = () => {
 
   // Section toggle: 'programs' vs 'recipes'
   const [activeMainTab, setActiveMainTab] = useState<'programs' | 'recipes'>('programs');
+
+  const handleGoToRecipes = () => {
+    if (onOpenRecipes) {
+      onOpenRecipes();
+    } else {
+      setActiveMainTab('recipes');
+    }
+  };
 
   // Programs state
   const [selectedProgramType, setSelectedProgramType] = useState<string>('All');
@@ -82,56 +98,60 @@ export const ProgramsScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-150" data-testid="programs-screen-layout">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-black text-[#1E293B] tracking-tight">
-          {isAr ? 'البرامج والوصفات الهرمونية المتكاملة' : 'PCOS Wellness Programs & Recipe Suite'}
-        </h2>
-        <p className="text-xs sm:text-sm text-[#64748B] mt-1">
-          {isAr
-            ? 'خطط شاملة مصممة علمياً لمعالجة أصل المشكلة مع مكتبة وصفات غنية بخيارات الدفع عبر بريدي موب وCIB.'
-            : 'Evidence-based protocols and therapeutic recipe library with BaridiMob & CIB payment.'}
-        </p>
-      </div>
+    <div className={`space-y-6 ${embedded ? 'pb-4' : 'pb-20'} animate-in fade-in duration-150`} data-testid="programs-screen-layout">
+      {!embedded && (
+        <>
+          {/* Header */}
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-[#1E293B] tracking-tight">
+              {isAr ? 'البرامج الغذائية العلاجية' : 'PCOS Nutrition & Wellness Programs'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#64748B] mt-1">
+              {isAr
+                ? 'خطط غذائية شاملة مصممة علمياً لمعالجة أصل المشكلة بخيارات الدفع عبر بريدي موب وCIB.'
+                : 'Evidence-based protocols and therapeutic meal plans with BaridiMob & CIB payment.'}
+            </p>
+          </div>
 
-      {/* Main Top Dual Navigation (Programs vs Recipe Library) */}
-      <div className="bg-[#FCF8F9] p-1.5 rounded-2xl border border-[#E2E8F0] flex gap-1.5 shadow-2xs">
-        <button
-          onClick={() => setActiveMainTab('programs')}
-          className={`flex-1 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
-            activeMainTab === 'programs'
-              ? 'bg-[#D81B60] text-white shadow-xs'
-              : 'text-[#64748B] hover:text-[#1E293B]'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>{isAr ? 'البرامج العلاجية المعتمدة' : 'Therapeutic Programs'}</span>
-        </button>
+          {/* Main Top Dual Navigation (Programs vs Recipe Library) */}
+          <div className="bg-[#FCF8F9] p-1.5 rounded-2xl border border-[#E2E8F0] flex gap-1.5 shadow-2xs">
+            <button
+              onClick={() => setActiveMainTab('programs')}
+              className={`flex-1 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+                activeMainTab === 'programs'
+                  ? 'bg-[#D81B60] text-white shadow-xs'
+                  : 'text-[#64748B] hover:text-[#1E293B]'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{isAr ? 'البرامج العلاجية المعتمدة' : 'Therapeutic Programs'}</span>
+            </button>
 
-        <button
-          onClick={() => setActiveMainTab('recipes')}
-          className={`flex-1 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
-            activeMainTab === 'recipes'
-              ? 'bg-[#D81B60] text-white shadow-xs'
-              : 'text-[#64748B] hover:text-[#1E293B]'
-          }`}
-        >
-          <ChefHat className="w-4 h-4" />
-          <span>
-            {isAr ? 'مكتبة الوصفات الصحية' : 'Healthy Recipe Library'}
-          </span>
-        </button>
-      </div>
+            <button
+              onClick={() => setActiveMainTab('recipes')}
+              className={`flex-1 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+                activeMainTab === 'recipes'
+                  ? 'bg-[#D81B60] text-white shadow-xs'
+                  : 'text-[#64748B] hover:text-[#1E293B]'
+              }`}
+            >
+              <ChefHat className="w-4 h-4" />
+              <span>
+                {isAr ? 'مكتبة الوصفات الصحية' : 'Healthy Recipe Library'}
+              </span>
+            </button>
+          </div>
+        </>
+      )}
 
       {/* ========================================================== */}
       {/* SECTION 1: PROGRAMS VIEW */}
       {/* ========================================================== */}
-      {activeMainTab === 'programs' && (
+      {(embedded || activeMainTab === 'programs') && (
         <div className="space-y-6 animate-in fade-in">
           {/* Healthy Recipe Library Showcase Card */}
           <div
-            onClick={() => setActiveMainTab('recipes')}
+            onClick={handleGoToRecipes}
             className="w-full bg-gradient-to-r from-[#FFF5F9] via-white to-[#FFF0F6] hover:from-[#FFEBF3] hover:to-[#FFE5F0] border-2 border-[#FFCEE3] rounded-3xl p-5 sm:p-6 cursor-pointer shadow-xs hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group relative overflow-hidden"
             data-testid="healthy-recipe-library-card"
           >
@@ -145,14 +165,16 @@ export const ProgramsScreen: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-black text-base sm:text-lg text-[#1E293B] group-hover:text-[#D81B60] transition-colors leading-snug">
-                    Healthy Recipe Library
+                    {isAr ? 'مكتبة الوصفات الصحية المرافقة' : 'Healthy Recipe Library'}
                   </h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FFCEE3]/80 text-[#D81B60]">
-                    {isAr ? 'مكتبة الوصفات' : 'Interactive Prototype'}
+                    {isAr ? 'وصفات متوازنة' : 'Balanced Meals'}
                   </span>
                 </div>
                 <p className="text-xs text-[#64748B] mt-1 leading-relaxed max-w-lg">
-                  Discover delicious and healthy recipes for your everyday lifestyle.
+                  {isAr
+                    ? 'اكتشفي وصفات صحية ولذيذة متوافقة مع البرامج الغذائية وتوازن الهرمونات.'
+                    : 'Discover delicious and healthy recipes tailored to your nutrition protocol.'}
                 </p>
               </div>
             </div>
@@ -161,12 +183,12 @@ export const ProgramsScreen: React.FC = () => {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActiveMainTab('recipes');
+                  handleGoToRecipes();
                 }}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#D81B60] to-[#C2185B] text-white font-black text-xs sm:text-sm shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-2 group-hover:scale-102"
               >
-                <span>Explore Recipes</span>
-                <ChevronRight className="w-4 h-4" />
+                <span>{isAr ? 'استكشاف الوصفات' : 'Explore Recipes'}</span>
+                <ChevronRight className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />
               </button>
             </div>
           </div>
@@ -317,7 +339,7 @@ export const ProgramsScreen: React.FC = () => {
                             </span>
                           </h5>
                           <button
-                            onClick={() => setActiveMainTab('recipes')}
+                            onClick={handleGoToRecipes}
                             className="text-[11px] font-bold text-[#D81B60] hover:underline"
                           >
                             {isAr ? `تصفح المكتبة كاملة (+${totalRecipesCount})` : 'Browse all recipes'}
@@ -360,9 +382,9 @@ export const ProgramsScreen: React.FC = () => {
       )}
 
       {/* ========================================================== */}
-      {/* SECTION 2: HEALTHY RECIPE LIBRARY */}
+      {/* SECTION 2: HEALTHY RECIPE LIBRARY (standalone fallback) */}
       {/* ========================================================== */}
-      {activeMainTab === 'recipes' && (
+      {!embedded && activeMainTab === 'recipes' && (
         <div className="animate-in fade-in" data-testid="healthy-recipe-library-tab">
           <HealthyRecipeLibraryScreen
             embedded={true}

@@ -4,15 +4,13 @@ import { PcosTopAppBar } from './components/PcosTopAppBar';
 import { PcosBottomNav } from './components/PcosBottomNav';
 import { SpecialistChatModal } from './components/SpecialistChatModal';
 import { QrCodeModal } from './components/QrCodeModal';
+import { PaymentModal } from './components/PaymentModal';
 import { HomeScreen } from './components/screens/HomeScreen';
 import { SpecialistsScreen } from './components/screens/SpecialistsScreen';
-import { StoresScreen } from './components/screens/StoresScreen';
-import { ProgramsScreen } from './components/screens/ProgramsScreen';
+import { NutritionScreen } from './components/screens/NutritionScreen';
 import { FitnessScreen } from './components/screens/FitnessScreen';
-import { KitchensScreen } from './components/screens/KitchensScreen';
 import { DashboardScreen } from './components/screens/DashboardScreen';
 import { SignUpScreen } from './components/screens/SignUpScreen';
-import { HealthyRecipeLibraryScreen } from './components/screens/HealthyRecipeLibraryScreen';
 import { SportsProgramsScreen } from './components/screens/SportsProgramsScreen';
 
 const MainAppContent: React.FC = () => {
@@ -24,18 +22,16 @@ const MainAppContent: React.FC = () => {
         return <HomeScreen />;
       case 'specialists':
         return <SpecialistsScreen />;
+      case 'nutrition':
       case 'stores':
-        return <StoresScreen />;
       case 'programs':
-        return <ProgramsScreen />;
       case 'healthy-recipes':
-        return <HealthyRecipeLibraryScreen />;
+      case 'kitchens':
+        return <NutritionScreen />;
       case 'sports-programs':
         return <SportsProgramsScreen />;
       case 'fitness':
         return <FitnessScreen />;
-      case 'kitchens':
-        return <KitchensScreen />;
       case 'dashboard':
         return <DashboardScreen />;
       case 'signup':
@@ -56,6 +52,7 @@ const MainAppContent: React.FC = () => {
       <PcosBottomNav />
       <SpecialistChatModal />
       <QrCodeModal />
+      <PaymentModal />
     </div>
   );
 };

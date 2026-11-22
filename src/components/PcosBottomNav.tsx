@@ -2,8 +2,6 @@ import React from 'react';
 import {
   BookOpen,
   Users,
-  Store,
-  Sparkles,
   Dumbbell,
   UtensilsCrossed,
   UserCircle
@@ -28,28 +26,16 @@ export const PcosBottomNav: React.FC = () => {
       labelEn: 'Specialists'
     },
     {
-      id: 'stores',
-      icon: Store,
-      labelAr: 'المتاجر',
-      labelEn: 'Stores'
-    },
-    {
-      id: 'programs',
-      icon: Sparkles,
-      labelAr: 'البرامج',
-      labelEn: 'Programs'
+      id: 'nutrition',
+      icon: UtensilsCrossed,
+      labelAr: 'التغذية',
+      labelEn: 'Nutrition'
     },
     {
       id: 'fitness',
       icon: Dumbbell,
       labelAr: 'الرياضة',
       labelEn: 'Physical'
-    },
-    {
-      id: 'kitchens',
-      icon: UtensilsCrossed,
-      labelAr: 'المطابخ',
-      labelEn: 'Kitchens'
     },
     {
       id: 'dashboard',
@@ -59,11 +45,13 @@ export const PcosBottomNav: React.FC = () => {
     }
   ];
 
+  const isNutritionScreen = ['nutrition', 'stores', 'programs', 'kitchens', 'healthy-recipes'].includes(currentScreen);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E2E8F0] shadow-lg">
       <div className="max-w-4xl mx-auto flex items-center justify-around px-1 py-1.5">
         {navItems.map((item) => {
-          const isActive = currentScreen === item.id;
+          const isActive = item.id === 'nutrition' ? isNutritionScreen : currentScreen === item.id;
           const Icon = item.icon;
           const label = isAr ? item.labelAr : item.labelEn;
 
